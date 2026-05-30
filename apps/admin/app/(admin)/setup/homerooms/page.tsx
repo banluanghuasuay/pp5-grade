@@ -3,7 +3,6 @@ import { Card, PageHeader } from "@pp5/ui";
 import { UserCheck } from "lucide-react";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/teacher-scope";
-import { abbreviateTitle } from "../score-structure/grading-utils";
 import { HomeroomRow } from "./homeroom-row";
 
 export const metadata = {
@@ -129,7 +128,10 @@ export default async function HomeroomsPage() {
     })
     .map((t) => ({
       id: t.id,
-      label: `${abbreviateTitle(t.user!.title)}${t.user!.full_name}`,
+      // Display ชื่อ-สกุล only — title prefix (ด.ช./ด.ญ./นาย/นาง) เป็น
+      // visual clutter ใน dropdown · admin จำได้จากชื่อ-สกุลอยู่แล้ว
+      // User spec 2026-05-22.
+      label: t.user!.full_name,
     }));
 
   // 4. Existing assignments — keyed by `${classroom_id}|${role}`

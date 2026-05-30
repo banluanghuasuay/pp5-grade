@@ -281,6 +281,16 @@
 .pp5-table .pp5-name {
   text-align: left;
   padding-left: 0.75rem;
+  /* Long student names truncate with "…" instead of wrapping to a
+     second line — keeps every row a uniform single-line height.
+     Works because every callsite (NumericTable, PrimaryAnnualSummary,
+     PassFailTable, EvalReportPage, student-eval, grade-summary,
+     pp5-class score sections) uses `<colgroup>` to lock the name
+     column width. User spec 2026-05-22: "ชื่อยาวให้แสดง … แทนที่จะ
+     ขึ้นบรรทัด 2". */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .pp5-table .pp5-maxrow {
   background: #f9fafb;
@@ -1100,6 +1110,23 @@
   color: #000;
 }
 
+/* Compact mode for classrooms whose curriculum exceeds the default
+   13-row pad. JSX adds `pp5-class-subjects--compact` when
+   `numericSubjects.length > MIN_SUBJECT_ROWS` (see pp5-class/page.tsx).
+   Trims font + padding so every subject still fits the cover without
+   the table spilling to a second page. User spec 2026-05-22. */
+.pp5-class-subjects.pp5-class-subjects--compact {
+  font-size: 10px;
+}
+.pp5-class-subjects.pp5-class-subjects--compact th,
+.pp5-class-subjects.pp5-class-subjects--compact td {
+  padding: 0.05rem 0.2rem;
+  line-height: 1.15;
+}
+.pp5-class-subjects--compact .pp5-class-subhead {
+  font-size: 8px;
+}
+
 /* Eval summary block below the subject table — 2-column layout (user
    spec 2026-05-19): chars + reading-thinking on the left, competency +
    activity (pass/fail) on the right (replaces the dropped student-count
@@ -1678,6 +1705,36 @@
   @page pp5-class-cover-page {
     size: A4 portrait;
     margin: 15mm 12mm 5mm;
+  }
+  /* Cover with >13 subjects — needs a taller print area for the
+     extra subject rows. Override @page margins (top 10mm · bottom 3mm)
+     and tighten header/footer spacing in the body so the table fits
+     without bleeding to a 2nd page. User spec 2026-05-22. */
+  .pp5-class-cover.pp5-class-cover--compact {
+    page: pp5-class-cover-page-compact;
+  }
+  @page pp5-class-cover-page-compact {
+    size: A4 portrait;
+    margin: 10mm 12mm 3mm;
+  }
+  .pp5-class-cover--compact .pp5-class-top {
+    margin-bottom: 0.2rem;
+  }
+  .pp5-class-cover--compact .pp5-class-title {
+    font-size: 16px;
+    margin: 0.2rem 0;
+  }
+  .pp5-class-cover--compact .pp5-class-school {
+    margin: 0.05rem 0;
+  }
+  .pp5-class-cover--compact .pp5-class-meta {
+    margin: 0.1rem 0;
+  }
+  .pp5-class-cover--compact .pp5-class-approval {
+    margin-top: 0.4rem;
+  }
+  .pp5-class-cover--compact .pp5-class-approval-section {
+    margin: 0.3rem 0 0.2rem;
   }
 
   /* Cover compactness — every section shrinks slightly so the whole cover

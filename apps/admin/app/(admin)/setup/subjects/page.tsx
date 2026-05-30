@@ -507,33 +507,75 @@ async function PlanSubjectsTable({
     <table className="w-full text-sm">
       <thead className="border-b border-zinc-200 bg-white text-left text-xs uppercase tracking-wide text-zinc-500">
         <tr>
-          <th className="px-4 py-2.5 font-medium">รหัส</th>
-          <th className="px-4 py-2.5 font-medium">ชื่อรายวิชา</th>
-          <th className="px-4 py-2.5 text-center font-medium">
+          <th className="px-2 py-2.5 text-center font-medium sm:px-4">ที่</th>
+          {/* Mobile: รหัส + ชื่อ รวมในคอลัมน์เดียว (stacked) ·
+              Desktop (md+): แยก 2 คอลัมน์เหมือนเดิม.
+              User spec 2026-05-22. */}
+          <th className="px-2 py-2.5 font-medium sm:px-4 md:hidden">
+            รหัส / ชื่อรายวิชา
+          </th>
+          <th className="hidden px-4 py-2.5 font-medium md:table-cell">
+            รหัส
+          </th>
+          <th className="hidden px-4 py-2.5 font-medium md:table-cell">
+            ชื่อรายวิชา
+          </th>
+          {/* Mobile: ชั่วโมง/ปี (หรือหน่วยกิต) + ประเภท รวมกัน · Desktop: แยก. */}
+          <th className="px-2 py-2.5 text-center font-medium sm:px-4 md:hidden">
+            {isPrimary ? "ชม./ปี · ประเภท" : "หน่วยกิต · ประเภท"}
+          </th>
+          <th className="hidden px-4 py-2.5 text-center font-medium md:table-cell">
             {isPrimary ? "ชั่วโมง/ปี" : "หน่วยกิต"}
           </th>
-          <th className="px-4 py-2.5 font-medium">ประเภท</th>
-          <th className="px-4 py-2.5 text-right font-medium">จัดการ</th>
+          <th className="hidden px-4 py-2.5 font-medium md:table-cell">
+            ประเภท
+          </th>
+          <th className="px-2 py-2.5 text-right font-medium sm:px-4">จัดการ</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-zinc-200">
-        {subjectRows.map((s) => (
+        {subjectRows.map((s, i) => (
           <tr key={s.id} className="hover:bg-zinc-50">
-            <td className="px-4 py-2 font-mono text-xs text-primary-700">
+            <td className="px-2 py-2 text-center font-sans text-xs tabular-nums text-zinc-500 sm:px-4">
+              {i + 1}
+            </td>
+            {/* Mobile combined: code (above) + name (below) */}
+            <td className="px-2 py-2 sm:px-4 md:hidden">
+              <div className="font-mono text-xs text-primary-700">
+                {s.code}
+              </div>
+              <div className="mt-0.5 font-medium text-zinc-900">
+                {s.name_th}
+              </div>
+            </td>
+            {/* Desktop separate */}
+            <td className="hidden px-4 py-2 font-mono text-xs text-primary-700 md:table-cell">
               {s.code}
             </td>
-            <td className="px-4 py-2 font-medium text-zinc-900">
+            <td className="hidden px-4 py-2 font-medium text-zinc-900 md:table-cell">
               {s.name_th}
             </td>
-            <td className="px-4 py-2 text-center font-sans text-xs tabular-nums text-zinc-700">
+            {/* Mobile combined: hours (above) + category badge (below) */}
+            <td className="px-2 py-2 text-center sm:px-4 md:hidden">
+              <div className="font-sans text-xs tabular-nums text-zinc-700">
+                {formatHours(s, isPrimary)}
+              </div>
+              <div className="mt-1">
+                <Badge variant={CATEGORY_VARIANT[s.category] ?? "neutral"}>
+                  {CATEGORY_LABEL[s.category] ?? s.category}
+                </Badge>
+              </div>
+            </td>
+            {/* Desktop separate */}
+            <td className="hidden px-4 py-2 text-center font-sans text-xs tabular-nums text-zinc-700 md:table-cell">
               {formatHours(s, isPrimary)}
             </td>
-            <td className="px-4 py-2">
+            <td className="hidden px-4 py-2 md:table-cell">
               <Badge variant={CATEGORY_VARIANT[s.category] ?? "neutral"}>
                 {CATEGORY_LABEL[s.category] ?? s.category}
               </Badge>
             </td>
-            <td className="px-4 py-2 text-right">
+            <td className="px-2 py-2 text-right sm:px-4">
               <div className="flex items-center justify-end gap-1">
                 <Link
                   href={`/setup/subjects/${s.id}?grade=${gradeId}&plan=${planId}`}

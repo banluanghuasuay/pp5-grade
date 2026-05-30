@@ -65,33 +65,56 @@ export function TeachingForm({
       <table className="w-full text-sm">
         <thead className="border-b border-zinc-200 bg-white text-left text-xs uppercase tracking-wide text-zinc-500">
           <tr>
-            <th className="px-4 py-2.5 font-medium">รหัส</th>
-            <th className="px-4 py-2.5 font-medium">ชื่อรายวิชา</th>
-            <th className="px-4 py-2.5 font-medium">ประเภท</th>
-            <th className="px-4 py-2.5 font-medium">ครูผู้สอน</th>
+            {/* Mobile: รวม ชื่อ + รหัส + ประเภท ใน 1 คอลัมน์ (stacked) ·
+                Desktop (md+): แยก 3 คอลัมน์เหมือนเดิม.
+                User spec 2026-05-22. */}
+            <th className="px-2 py-2.5 font-medium sm:px-4 md:hidden">วิชา</th>
+            <th className="hidden px-4 py-2.5 font-medium md:table-cell">
+              รหัส
+            </th>
+            <th className="hidden px-4 py-2.5 font-medium md:table-cell">
+              ชื่อรายวิชา
+            </th>
+            <th className="hidden px-4 py-2.5 font-medium md:table-cell">
+              ประเภท
+            </th>
+            <th className="px-2 py-2.5 font-medium sm:px-4">ครูผู้สอน</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-200">
           {subjects.map((s) => (
             <tr key={s.id} className="hover:bg-zinc-50">
-              <td className="px-4 py-2 font-mono text-xs text-primary-700">
+              {/* Mobile combined: ชื่อ (บรรทัดบน) + รหัส & ประเภท (บรรทัดล่าง) */}
+              <td className="px-2 py-2 align-top sm:px-4 md:hidden">
+                <div className="font-medium text-zinc-900">{s.name_th}</div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="font-mono text-primary-700">{s.code}</span>
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 font-medium ${CATEGORY_BADGE[s.category] ?? "bg-zinc-100 text-zinc-700"}`}
+                  >
+                    {CATEGORY_LABEL[s.category] ?? s.category}
+                  </span>
+                </div>
+              </td>
+              {/* Desktop separate */}
+              <td className="hidden px-4 py-2 font-mono text-xs text-primary-700 md:table-cell">
                 {s.code}
               </td>
-              <td className="px-4 py-2 font-medium text-zinc-900">
+              <td className="hidden px-4 py-2 font-medium text-zinc-900 md:table-cell">
                 {s.name_th}
               </td>
-              <td className="px-4 py-2">
+              <td className="hidden px-4 py-2 md:table-cell">
                 <span
                   className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${CATEGORY_BADGE[s.category] ?? "bg-zinc-100 text-zinc-700"}`}
                 >
                   {CATEGORY_LABEL[s.category] ?? s.category}
                 </span>
               </td>
-              <td className="px-4 py-2">
+              <td className="px-2 py-2 align-top sm:px-4">
                 <Select
                   name={`teacher_${s.id}`}
                   defaultValue={s.assignedTeacherId ?? ""}
-                  className="min-w-[200px]"
+                  className="w-full md:min-w-[200px]"
                 >
                   <option value="">— ยังไม่กำหนด —</option>
                   {teachers.map((t) => (

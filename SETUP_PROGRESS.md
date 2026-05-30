@@ -3580,4 +3580,101 @@ and the label is hidden by the @media screen scope. User spec
   - Teacher-scoped widget (homeroom-only pending evals)
   - Score widget (จำนวน offering ที่ยังไม่บันทึก) — skip จาก v1
 
+---
+
+## Session 2026-05-22 (Part 3) — Production deploy + UX polish
+
+> สิ้นสุดวันนี้: ระบบขึ้น production บน Vercel ครบทั้ง 2 apps · พร้อมใช้งานจริง
+
+### 1. Subjects list UI polish
+- **ลบช่อง "วิธีประเมิน"** จากฟอร์มเพิ่ม/แก้วิชา · คงเหลือเลือก category อย่างเดียว (grading_mode ตัดสินใจอัตโนมัติใน parseForm) · rename legend "ประเภทและการประเมิน" → "ประเภทวิชา"
+- **Column "หน่วยกิต/ชั่วโมง" ใน list**: ปรับ display ตาม system
+  - ประถม → header "ชั่วโมง/ปี" · cell แสดง "X ชม./ปี"
+  - มัธยม → header "หน่วยกิต" · cell แสดง credit_hours
+  - มัธยม activity → "X ชม./ภาค"
+- **Font**: cell ใช้ `font-sans tabular-nums` (Sarabun + เลขความกว้างเท่ากัน) แทน `font-mono`
+
+### 2. Attendance per-subject grid fixes (รองรับ ชั่วโมง/ปี ของประถม)
+**Bug**: ตอนเปลี่ยน credit_hours → hours_per_year สำหรับประถม · หน้า `/setup/attendance/by-subject` + `/reports/attendance-by-subject` คำนวณ slotsPerWeek จาก credit_hours อย่างเดียว → ประถมเห็น 1 ช่อง/สัปดาห์ทุกวิชา (ผิด)
+
+**Fix**: slotsPerWeek แยกตาม (system, category):
+- Secondary core/additional → `credit_hours × 2`
+- Primary core/additional   → `hours_per_year ÷ 40` (40 weeks/year)
+- Primary activity          → `hours_per_year ÷ 40`
+- Secondary activity        → `hours_per_year ÷ 20` (20 weeks/term)
+
+ตัวอย่าง: ภาษาไทย ป.1 ที่ตั้ง 200 ชม./ปี → 200/40 = 5 ช่อง/สัปดาห์ (เท่ากับ credit_hours=2.5 เดิม)
+
+Display ปรับ: ประถมแสดง "X ชม./ปี" · มัธยมแสดง "X หน่วยกิต"
+
+### 3. Teacher list — sort + dropdown ครอบทั้ง app
+- **List** (`/setup/teachers`): ใช้ `learning_areas.sort_order` เป็นเกณฑ์ tertiary
+  ```
+  Sort: ผู้อำนวยการ → รองผู้อำนวยการ → ครูผู้สอน (ตาม กลุ่มสาระ → ชื่อ)
+  ```
+- **Dropdown** `/setup/teaching` (จัดครูเข้าสอน): sort เดียวกัน · เพิ่ม `position`+`department` ใน query + parallel `learning_areas`
+- **Dropdown** `/setup/homerooms` (ครูประจำชั้น): sort เดียวกัน · แปลง 2 sequential awaits เป็น Promise.all
+
+### 4. Subject re-add bug fix
+**Bug user**: ลบวิชาแล้วจะเพิ่มใหม่ด้วยรหัสเดิม → "ใช้ไปแล้ว"
+
+**Root cause**: `deleteSubject` ทำ unlink เฉพาะ `study_plan_subjects` row (preserve subjects row · shared subject across plans pattern)
+
+**Fix** `createSubject` catch error code 23505 + `recoverFromDuplicateCode`:
+- (a) มีในแผนนี้แล้ว → error "วิชานี้อยู่ในแผนนี้แล้ว"
+- (b) link plan อื่นเท่านั้น → link เข้าแผนนี้ · ไม่แตะ subject fields
+- (c) orphan (ไม่มี plan link) → UPDATE fields + link → recover transparent
+
+### 5. Dashboard spinner UX
+**Iteration 1**: เพิ่ม `<Suspense>` + key รอบ subjects table — ขยาย/refetch ตอนเปลี่ยนชั้น
+
+**Issue user**: "เลือกชั้นแล้ว spinner ไม่ขึ้นทันที · มีหน่วงก่อน"
+- สาเหตุ: Suspense fallback กระตุ้นเมื่อ new RSC เริ่ม render · ระหว่าง network fetch ยังเห็นของเดิม
+
+**Iteration 2**: ใช้ `useTransition` + spinner ข้าง dropdown — แต่ user "ไม่อยากเห็นข้าง dropdown · อยากเห็นในพื้นที่ตาราง"
+
+**Iteration 3 (final)**: สร้าง `NavigationGate` client component
+- watch `useSearchParams()` ทันที (client-side · 0ms)
+- compare URL params กับ rendered props (server-rendered)
+- mismatch → ซ่อน children + แสดง spinner ในพื้นที่ตาราง
+
+→ ตอนนี้คลิกชั้น ตารางหายทันที + spinner ขึ้นเลย
+
+### 6. Production Deploy (Vercel)
+**Pre-deploy**:
+- ✅ Initial commit + git init (project ไม่เคยอยู่ใน git มาก่อน)
+- ✅ Verified `.gitignore` ครอบ `.env.local` (ใช้ `git check-ignore`)
+- ✅ Git user (local repo only): `Topchanon <topchanon@gmail.com>`
+- ✅ Commit: `abe9333` · 213 files
+- ✅ Push → `github.com/WebAppSchool-By-Chanon/pp5-grade` (private)
+- ✅ Production build ทดสอบ local: admin 34 routes / parent 3 routes ผ่านทั้งคู่
+
+**Deploy steps**:
+1. **Admin** `pp5-admin` project · Root Directory `apps/admin` · 4 env vars (รวม SERVICE_ROLE_KEY)
+2. **Parent** `pp5-parent` project · Root Directory `apps/parent` · 3 env vars (NO SERVICE_ROLE_KEY)
+3. **Supabase Auth URLs** ตั้ง 4 URLs:
+   - Site URL: `https://pp5-grade-admin.vercel.app`
+   - Redirect URLs: admin/parent vercel + localhost:3000/3001 (มี `/**` wildcard)
+
+**Production URLs**:
+- 🔧 Admin: https://pp5-grade-admin.vercel.app
+- 👨‍👩‍👧 Parent: https://pp5-grade-parent.vercel.app
+- 📦 Code: github.com/WebAppSchool-By-Chanon/pp5-grade
+
+**Test**: login admin ใน production ผ่าน ✅
+
+### ⚠️ Pending after deploy
+- **Rotate SUPABASE_SERVICE_ROLE_KEY** (key เคยถูกส่งในแชต · user ข้ามไว้ก่อน · แนะนำ rotate ภายหลังเพื่อความปลอดภัย)
+- **Apply migrations ใน prod Supabase** — ยังไม่เช็คว่าทุก migration ที่อยู่ใน `migrations/` apply ใน production Supabase หรือยัง · ถ้าหน้าใดเพี้ยน → ตรวจตรงนี้
+- **Custom domain** (optional) — admin.school.ac.th / parent.school.ac.th
+
+### 🔜 Workflow ครั้งหน้า
+```
+1. แก้โค้ดในเครื่อง
+2. ทดสอบ localhost:3000
+3. git push → Vercel auto-deploy ทั้ง 2 apps (~3 นาที)
+```
+- Auto-deploy: default ON · ทุก push ขึ้น main branch จะ trigger build
+- Preview deployments: branch อื่น push ขึ้นไปก็ได้ preview URL อัตโนมัติ
+
 

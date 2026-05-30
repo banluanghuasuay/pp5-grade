@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { logoutAction } from "../_actions/auth";
 import { MobileHeader } from "./_components/mobile-header";
+import { MobileNavProvider } from "./_components/mobile-nav-context";
 import { PageContextBar } from "./_components/page-context-bar";
 import { Sidebar } from "./_components/sidebar";
 
@@ -47,26 +48,28 @@ export default async function AppLayout({
   const userLabel = `${auth.profile.title ?? ""}${auth.profile.full_name} · ${roleLabel}`;
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 md:flex-row">
-      <Sidebar
-        isAdmin={isAdmin}
-        user={{
-          title: auth.profile.title,
-          fullName: auth.profile.full_name,
-          roleLabel,
-          username: auth.profile.username,
-        }}
-        logoutAction={logoutAction}
-        schoolLogoUrl={schoolLogoUrl}
-      />
+    <MobileNavProvider>
+      <div className="flex min-h-screen flex-col bg-zinc-50 md:flex-row">
+        <Sidebar
+          isAdmin={isAdmin}
+          user={{
+            title: auth.profile.title,
+            fullName: auth.profile.full_name,
+            roleLabel,
+            username: auth.profile.username,
+          }}
+          logoutAction={logoutAction}
+          schoolLogoUrl={schoolLogoUrl}
+        />
 
-      <MobileHeader userLabel={userLabel} logoutAction={logoutAction} />
+        <MobileHeader userLabel={userLabel} logoutAction={logoutAction} />
 
-      <main className="flex-1 overflow-x-hidden">
-        {/* Phase 2.6 — top context strip on every page (breadcrumb + term) */}
-        <PageContextBar />
-        <div className="mx-auto max-w-6xl p-6 sm:p-8">{children}</div>
-      </main>
-    </div>
+        <main className="flex-1 overflow-x-hidden">
+          {/* Phase 2.6 — top context strip on every page (breadcrumb + term) */}
+          <PageContextBar />
+          <div className="mx-auto max-w-6xl p-6 sm:p-8">{children}</div>
+        </main>
+      </div>
+    </MobileNavProvider>
   );
 }

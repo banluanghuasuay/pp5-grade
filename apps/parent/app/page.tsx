@@ -20,8 +20,8 @@ export default async function Home() {
       <header className="border-b border-zinc-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
           <div>
-            <h1 className="text-base font-bold sm:text-lg">ระบบ ปพ.5</h1>
-            <p className="text-xs text-zinc-500">ผู้ปกครอง</p>
+            <h1 className="text-base font-bold sm:text-lg">ระบบรายงานผลการเรียน</h1>
+            <p className="text-xs text-zinc-500">นักเรียนและผู้ปกครอง</p>
           </div>
           <form action={logoutAction}>
             <Button type="submit" variant="secondary" size="sm">

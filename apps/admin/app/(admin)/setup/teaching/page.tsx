@@ -2,8 +2,11 @@ import { createClient } from "@pp5/database/server";
 import { Card, PageHeader } from "@pp5/ui";
 import { ClipboardCheck } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 import { requireAdmin } from "@/lib/teacher-scope";
 import { ClassroomSelector } from "./classroom-selector";
+import { NavigationGate } from "./navigation-gate";
+import { TeachingSkeleton } from "./teaching-skeleton";
 import { TeachingForm, type SubjectRow, type TeacherOption } from "./teaching-form";
 
 const CATEGORY_ORDER: Record<string, number> = {
@@ -232,16 +235,37 @@ export default async function TeachingPage({ searchParams }: Props) {
           </Link>
         </Card>
       ) : (
-        <TeachingTableSection
-          classroomId={selectedClassroom.id}
-          planId={selectedClassroom.study_plan_id}
-          readSemester={readSemester}
-          gradeId={selectedGrade.id}
-          roomId={selectedClassroom.id}
-          roomLabel={roomLabel(selectedClassroom.room_number)}
-          currentYearId={currentYear.id}
-          effectiveSemester={effectiveSemester}
-        />
+        // Two-layer loading UX so admin sees the skeleton at 0ms:
+        //   1. <NavigationGate> — client component watching useSearchParams.
+        //      Swaps to <TeachingSkeleton> the instant the URL changes,
+        //      before any RSC has been requested. (Solves the "stale prior
+        //      table flashes for ~200ms after clicking" problem.)
+        //   2. <Suspense key={classroomId}> — when the new classroom's RSC
+        //      streams in, React mounts a fresh tree (key change) and
+        //      shows the same skeleton until the await chain in
+        //      TeachingTableSection resolves.
+        // Both render the same skeleton component → no visual jump
+        // between the two phases.
+        <NavigationGate
+          renderedGradeId={selectedGrade.id}
+          renderedRoomId={selectedClassroom.id}
+        >
+          <Suspense
+            key={`teaching-${selectedClassroom.id}`}
+            fallback={<TeachingSkeleton />}
+          >
+            <TeachingTableSection
+              classroomId={selectedClassroom.id}
+              planId={selectedClassroom.study_plan_id}
+              readSemester={readSemester}
+              gradeId={selectedGrade.id}
+              roomId={selectedClassroom.id}
+              roomLabel={roomLabel(selectedClassroom.room_number)}
+              currentYearId={currentYear.id}
+              effectiveSemester={effectiveSemester}
+            />
+          </Suspense>
+        </NavigationGate>
       )}
     </>
   );
@@ -389,7 +413,10 @@ async function TeachingTableSection({
     })
     .map((t) => ({
       id: t.id,
-      label: `${t.user?.title ?? ""}${t.user?.full_name ?? ""}`,
+      // Display ชื่อ-สกุล only — title prefix (นาย/นาง/นางสาว) เป็น
+      // visual clutter ใน dropdown · admin จำได้จากชื่อ-สกุลอยู่แล้ว
+      // User spec 2026-05-22.
+      label: t.user?.full_name ?? "",
     }));
 
   return (

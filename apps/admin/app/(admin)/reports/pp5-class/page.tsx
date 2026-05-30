@@ -154,13 +154,14 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
     .limit(1)
     .maybeSingle();
 
-  // 2. Classroom + grade level + academic year
+  // 2. Classroom + grade level + academic year + study plan
   const { data: classroom } = await supabase
     .from("classrooms")
     .select(
       `
       id,
       room_number,
+      study_plan_id,
       grade_level:grade_levels!grade_level_id (id, name_th, system),
       academic_year:academic_years!academic_year_id (id, year_be, current_semester)
     `,
@@ -221,30 +222,42 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
       (h) => `${h.teacher!.user!.title ?? ""}${h.teacher!.user!.full_name}`,
     );
 
-  // 5. Subjects offered in this classroom — join subject_offerings with
-  //    subjects. We pull academic_year_id on the joined subject so we
-  //    can drop offerings that point to a subject from a DIFFERENT year
-  //    (the subjects table is per-academic-year; orphaned offerings can
-  //    accumulate when subjects are re-created year-over-year). User
-  //    report 2026-05-20: "ลงทะเบียน 1 วิชา แต่แสดง 3 วิชา" — turns out
-  //    the extra 2 belonged to next year's subjects.
-  const { data: offerings } = await supabase
-    .from("subject_offerings")
-    .select(
-      `
-      id,
-      semester,
-      subject:subjects!subject_id (
-        id, code, name_th, category, grading_mode, credit_hours,
-        hours_per_year, semester, academic_year_id
-      )
-    `,
-    )
-    .eq("classroom_id", classroomId);
+  // 5. Subjects on the cover — pulled from the classroom's STUDY PLAN
+  //    (single source of truth for "what subjects this class learns")
+  //    rather than from `subject_offerings`. User spec 2026-05-22:
+  //    "หน้าปก ปพ.5 รวมชั้น มีแต่วิชาภาษาไทย" — root cause: cover used
+  //    to derive subjects from offerings, so any subject WITHOUT a
+  //    teacher assignment (no offering row yet) silently vanished. By
+  //    sourcing from study_plan_subjects every plan subject shows up,
+  //    even before admin runs /setup/teaching.
+  //
+  //    Offerings are still queried in parallel for grade lookups
+  //    (offering_ids are needed to fetch grades/scores below).
+  const [planSubjectsResult, offeringsResult] = await Promise.all([
+    classroom.study_plan_id
+      ? supabase
+          .from("study_plan_subjects")
+          .select(
+            `
+            sort_order,
+            subject:subjects!subject_id (
+              id, code, name_th, category, grading_mode, credit_hours,
+              hours_per_year, semester, academic_year_id
+            )
+          `,
+          )
+          .eq("study_plan_id", classroom.study_plan_id)
+      : Promise.resolve({ data: [] as never[], error: null }),
+    supabase
+      .from("subject_offerings")
+      .select("id, subject_id, semester")
+      .eq("classroom_id", classroomId),
+  ]);
 
-  // Group subjects — for primary each subject has 2 offerings (sem 1 + sem 2);
-  // deduplicate by subject.id. For secondary, keep only the current semester's
-  // offerings (subjects matching the current term).
+  // Build subject list from plan — drop subjects belonging to a
+  // different academic year (subjects table is per-(year, semester) so
+  // stale plan links can point at last year's records) or, for
+  // secondary classrooms, a different semester.
   const subjectMap = new Map<
     string,
     {
@@ -258,41 +271,69 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
       offeringIds: string[]; // all offerings for this subject in this class
     }
   >();
-  for (const o of offerings ?? []) {
-    if (!o.subject) continue;
-    // Drop offerings whose subject belongs to a different academic year —
-    // happens when previous-year offerings reference subject records
-    // that were re-created (with new id) for the new year. The UI on
-    // /setup/subjects filters by year so users see "1 subject" while
-    // the offerings table still has stale rows pointing to last year's
-    // subject rows. This filter matches the UI's view.
-    if (o.subject.academic_year_id !== yearId) continue;
-    // Secondary: only include offerings whose semester matches the current
-    // term (so the cover reflects the term-specific subject set).
-    if (!isPrimary && o.semester !== semester) continue;
-    const existing = subjectMap.get(o.subject.id);
-    if (existing) {
-      existing.offeringIds.push(o.id);
-    } else {
-      subjectMap.set(o.subject.id, {
-        id: o.subject.id,
-        code: o.subject.code,
-        name_th: o.subject.name_th,
-        category: o.subject.category,
-        grading_mode: o.subject.grading_mode,
-        credit_hours: o.subject.credit_hours,
-        hours_per_year: o.subject.hours_per_year,
-        offeringIds: [o.id],
-      });
-    }
+  for (const ps of planSubjectsResult.data ?? []) {
+    // study_plan_subjects.subject is a JOIN; the FK is one-to-one so
+    // Supabase resolves it as an OBJECT (not an array). The wider type
+    // signature can present as array when the relationship is many —
+    // here we treat as the single-row form.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const s = (ps as any).subject as {
+      id: string;
+      code: string;
+      name_th: string;
+      category: "core" | "additional" | "activity";
+      grading_mode: "numeric" | "pass_fail";
+      credit_hours: number | null;
+      hours_per_year: number | null;
+      semester: number;
+      academic_year_id: string;
+    } | null;
+    if (!s) continue;
+    if (s.academic_year_id !== yearId) continue;
+    if (!isPrimary && s.semester !== semester) continue;
+    if (subjectMap.has(s.id)) continue;
+    subjectMap.set(s.id, {
+      id: s.id,
+      code: s.code,
+      name_th: s.name_th,
+      category: s.category,
+      grading_mode: s.grading_mode,
+      credit_hours: s.credit_hours,
+      hours_per_year: s.hours_per_year,
+      offeringIds: [],
+    });
   }
+
+  // Attach offering_ids — for primary each subject has 2 offerings
+  // (sem 1 + sem 2); both are kept. For secondary, only the current
+  // semester's offering is relevant.
+  for (const o of offeringsResult.data ?? []) {
+    const entry = subjectMap.get(o.subject_id);
+    if (!entry) continue;
+    if (!isPrimary && o.semester !== semester) continue;
+    entry.offeringIds.push(o.id);
+  }
+
   const subjects = Array.from(subjectMap.values());
 
-  // 6. Total instructional hours per year — sum of:
-  //     - numeric subjects: credit_hours × 40 (1 credit = 40 hrs/year, สพฐ.)
-  //     - activity subjects: hours_per_year directly
+  // 6. Total instructional hours per year — derivation depends on system:
+  //     Primary   → ทุกวิชา (core/additional + activity) เก็บใน
+  //                 hours_per_year (ชั่วโมง/ปี) ตรงๆ · sum ทั้งหมด.
+  //                 User spec 2026-05-22: "เอาเวลาเรียนของทุกวิชา
+  //                 มารวมกัน รวมเวลาวิชากิจกรรมด้วย ตามที่บันทึกใน
+  //                 เมนูจัดการรายวิชา".
+  //     Secondary → core/additional ใช้ credit_hours × 40 (1 หน่วยกิต
+  //                 = 40 ชม./ภาคเรียน × 2 ภาค ทำให้ ÷ 2 × 2 → 40 ชม./ปี).
+  //                 activity ใช้ hours_per_year (เก็บเป็น "ชม./ภาค") × 2.
   const totalHoursPerYear = subjects.reduce((sum, s) => {
-    if (s.grading_mode === "pass_fail") return sum + (s.hours_per_year ?? 0);
+    if (isPrimary) {
+      return sum + (s.hours_per_year ?? 0);
+    }
+    if (s.grading_mode === "pass_fail") {
+      // Secondary activity: hours_per_year column stores per-semester
+      // hours; double for annual total.
+      return sum + (s.hours_per_year ?? 0) * 2;
+    }
     return sum + (s.credit_hours ?? 0) * 40;
   }, 0);
 
@@ -1446,7 +1487,13 @@ function Pp5ClassCover({
   );
 
   return (
-    <section className="pp5-page-content pp5-class-cover">
+    <section
+      className={`pp5-page-content pp5-class-cover${
+        numericSubjects.length > MIN_SUBJECT_ROWS
+          ? " pp5-class-cover--compact"
+          : ""
+      }`}
+    >
       {/* Top header — logo (centered) + "ปพ.5 (รวม)" label (top-right) */}
       <div className="pp5-class-top">
         {school?.logo_url && (
@@ -1490,8 +1537,19 @@ function Pp5ClassCover({
           Columns (13 total, widths locked via <colgroup> + table-layout:
           fixed in globals.css):
             ที่ 4% · รหัสวิชา 8% · รายวิชา 30% · จำนวนนักเรียน 9% ·
-            8 grade buckets × 5% (40%) · หมายเหตุ 9% = 100% */}
-      <table className="pp5-table pp5-class-subjects">
+            8 grade buckets × 5% (40%) · หมายเหตุ 9% = 100%
+
+          Compact modifier kicks in when the numeric subject count
+          exceeds the default MIN_SUBJECT_ROWS (13). The table + cell
+          font + padding shrink so all rows still fit on a single page.
+          User spec 2026-05-22. */}
+      <table
+        className={`pp5-table pp5-class-subjects${
+          numericSubjects.length > MIN_SUBJECT_ROWS
+            ? " pp5-class-subjects--compact"
+            : ""
+        }`}
+      >
         <colgroup>
           <col style={{ width: "4%" }} />
           <col style={{ width: "8%" }} />
@@ -1698,10 +1756,22 @@ function Pp5ClassCover({
         for (const name of homeroomsForRow) {
           approveCells.push({ name, role: "ครูประจำชั้น" });
         }
-        approveCells.push({
-          name: school?.assessment_officer_name ?? "—",
-          role: "หัวหน้างานวัดและประเมินผล",
-        });
+        // Officer signature — prefer หัวหน้างานวัดและประเมินผล when
+        // the school filled it in; otherwise fall back to หัวหน้าวิชาการ
+        // (academic_head_name) so the slot never goes blank. User spec
+        // 2026-05-22.
+        const officerName = school?.assessment_officer_name?.trim();
+        if (officerName) {
+          approveCells.push({
+            name: officerName,
+            role: "หัวหน้างานวัดและประเมินผล",
+          });
+        } else {
+          approveCells.push({
+            name: school?.academic_head_name?.trim() || "—",
+            role: "หัวหน้าวิชาการ",
+          });
+        }
         return (
           <div className="pp5-class-approval">
             <p className="pp5-class-approval-section">การอนุมัติผลการเรียน</p>

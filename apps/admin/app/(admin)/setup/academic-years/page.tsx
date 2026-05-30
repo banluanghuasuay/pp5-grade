@@ -78,8 +78,8 @@ export default async function AcademicYearsPage({ searchParams }: Props) {
       )}
 
       {!error && years && years.length > 0 && (
-        <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
               <tr>
                 <th className="px-4 py-3 font-medium">ปีการศึกษา (พ.ศ.)</th>

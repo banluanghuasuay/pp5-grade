@@ -11,8 +11,8 @@ const sarabun = Sarabun({
 
 export const metadata: Metadata = {
   title: {
-    default: "ระบบ ปพ.5 · ผู้ปกครอง",
-    template: "%s · ระบบ ปพ.5",
+    default: "ระบบรายงานผลการเรียน · นักเรียนและผู้ปกครอง",
+    template: "%s · ระบบรายงานผลการเรียน",
   },
   description: "Portal ผู้ปกครอง · ดูข้อมูลผลการเรียนนักเรียน",
 };

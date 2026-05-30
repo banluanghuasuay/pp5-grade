@@ -422,11 +422,16 @@ export default async function StudentsPage({ searchParams }: Props) {
       )}
 
       {!error && shouldShowList && filteredRows.length > 0 && (
-        <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
+          <table className="w-full min-w-[480px] text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
               <tr>
-                <th className="px-3 py-2 font-medium">ห้อง</th>
+                {/* Hide "ห้อง" column on mobile — same info is already
+                    in the room dropdown filter above the table. User
+                    spec 2026-05-22: ไม่ต้องแสดงคอลัมน์ที่ห้อง. */}
+                <th className="hidden px-3 py-2 font-medium md:table-cell">
+                  ห้อง
+                </th>
                 <th className="px-3 py-2 font-medium">เลขที่</th>
                 <th className="px-3 py-2 font-medium">รหัสนักเรียน</th>
                 <th className="px-3 py-2 font-medium">ชื่อ-นามสกุล</th>
@@ -436,7 +441,7 @@ export default async function StudentsPage({ searchParams }: Props) {
             <tbody className="divide-y divide-zinc-200">
               {filteredRows.map((r) => (
                 <tr key={r.id} className="hover:bg-zinc-50">
-                  <td className="px-3 py-1 font-medium text-zinc-900">
+                  <td className="hidden px-3 py-1 font-medium text-zinc-900 md:table-cell">
                     {r.enrollment ? (
                       <span>{r.enrollment.classroom_display}</span>
                     ) : (

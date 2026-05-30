@@ -30,11 +30,13 @@ import {
   Settings,
   UserCheck,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useMobileNav } from "./mobile-nav-context";
 
 /**
  * Renders the link icon → swaps to a spinner the moment its parent `<Link>`
@@ -246,6 +248,11 @@ function findBestMatchHref(
 
 export function Sidebar({ isAdmin, user, logoutAction, schoolLogoUrl }: Props) {
   const pathname = usePathname();
+  /** Mobile drawer state — shared with `MobileHeader`'s hamburger button
+   *  via context. Desktop ignores this (always renders the sidebar
+   *  static in the page flow). */
+  const { open: mobileOpen, setOpen: setMobileOpen } = useMobileNav();
+  const closeMobileDrawer = () => setMobileOpen(false);
 
   /** Whole sidebar collapsed → icon-only rail. */
   const [collapsed, setCollapsed] = useState(false);
@@ -292,12 +299,32 @@ export function Sidebar({ isAdmin, user, logoutAction, schoolLogoUrl }: Props) {
   const visibleSections = SECTIONS.filter((s) => !s.adminOnly || isAdmin);
 
   return (
-    <aside
-      className={cn(
-        "hidden shrink-0 flex-col border-r border-zinc-200 bg-white transition-[width] duration-200 ease-out md:flex",
-        collapsed ? "w-16" : "w-60",
+    <>
+      {/* Mobile drawer backdrop — only renders when drawer is open,
+          click anywhere outside the panel to close. Hidden on desktop
+          (`md:hidden`). User spec 2026-05-22: hamburger + drawer for
+          mobile menu access. */}
+      {mobileOpen && (
+        <div
+          className="no-print fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={closeMobileDrawer}
+          aria-hidden
+        />
       )}
-    >
+      <aside
+        className={cn(
+          "no-print shrink-0 flex-col border-r border-zinc-200 bg-white transition-[width] duration-200 ease-out",
+          // Mobile drawer state — fixed overlay when open, hidden when
+          // closed. Desktop overrides (md:) below put it back into the
+          // page flow.
+          mobileOpen ? "fixed inset-y-0 left-0 z-50 flex w-72" : "hidden",
+          "md:relative md:z-auto md:flex md:!inset-auto",
+          // Expanded width = 288px (was 240px) so the longer brand
+          // "ระบบบันทึกผลการเรียน" + chevron toggle fit on one line at
+          // text-sm without truncation. User spec 2026-05-22.
+          collapsed ? "md:w-16" : "md:w-72",
+        )}
+      >
       {/* Brand + collapse toggle.
           Logo (if uploaded by admin at /setup/school):
             - Expanded sidebar → logo + "ระบบ ปพ.5" + "หลังบ้าน" stack
@@ -320,8 +347,12 @@ export function Sidebar({ isAdmin, user, logoutAction, schoolLogoUrl }: Props) {
               />
             )}
             <div className="min-w-0">
-              <h1 className="text-base font-bold text-zinc-900">ระบบ ปพ.5</h1>
-              <p className="text-xs text-zinc-500">หลังบ้าน</p>
+              <h1 className="truncate whitespace-nowrap text-sm font-bold text-zinc-900">
+                ระบบบันทึกผลการเรียน
+              </h1>
+              <p className="truncate text-xs text-zinc-500">
+                (ปพ.5 ออนไลน์)
+              </p>
             </div>
           </div>
         )}
@@ -333,12 +364,24 @@ export function Sidebar({ isAdmin, user, logoutAction, schoolLogoUrl }: Props) {
             className="h-7 w-7 shrink-0 rounded object-contain"
           />
         )}
+        {/* Mobile: X to close drawer · Desktop: collapse toggle. The
+            collapse toggle is hidden on mobile because the drawer is
+            always shown fully (not as a rail). */}
+        <button
+          type="button"
+          onClick={closeMobileDrawer}
+          aria-label="ปิดเมนู"
+          title="ปิดเมนู"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary-600 md:hidden"
+        >
+          <X className="h-4 w-4" />
+        </button>
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
           aria-label={collapsed ? "ขยายเมนู" : "ย่อเมนู"}
           title={collapsed ? "ขยายเมนู" : "ย่อเมนู"}
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary-600"
+          className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary-600 md:inline-flex"
         >
           {collapsed ? (
             <ChevronsRight className="h-4 w-4" />
@@ -356,6 +399,7 @@ export function Sidebar({ isAdmin, user, logoutAction, schoolLogoUrl }: Props) {
             <Link
               key={link.href}
               href={link.href}
+              onClick={closeMobileDrawer}
               aria-current={isActive ? "page" : undefined}
               title={collapsed ? link.label : undefined}
               className={cn(
@@ -421,6 +465,7 @@ export function Sidebar({ isAdmin, user, logoutAction, schoolLogoUrl }: Props) {
                       <Link
                         key={link.href}
                         href={link.href}
+                        onClick={closeMobileDrawer}
                         aria-current={isActive ? "page" : undefined}
                         className={
                           isActive
@@ -476,6 +521,7 @@ export function Sidebar({ isAdmin, user, logoutAction, schoolLogoUrl }: Props) {
           </button>
         </form>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
