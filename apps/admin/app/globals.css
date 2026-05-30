@@ -1,0 +1,2159 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Font — Sarabun (loaded via next/font in layout.tsx) */
+  --font-sans: var(--font-sarabun);
+
+  /* Primary brand — sky blue (educational, official Thai gov style) */
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #7dd3fc;
+  --color-primary-400: #38bdf8;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+  --color-primary-800: #075985;
+  --color-primary-900: #0c4a6e;
+  --color-primary-950: #082f49;
+}
+
+/* =====================================================================
+   Phase 3 — Print-optimized layout for ปพ.5 / ปพ.6
+   =====================================================================
+   Screen: shows page in a card-style container with comfortable padding.
+   Print:  applies @page A4, hides admin chrome (sidebar/header), and
+   simplifies decorations so the page prints cleanly to PDF or paper.
+*/
+
+.pp5-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  background: #fff;
+  /* Solid black for all official school document text. Inherited by
+     every child — the ปพ.5 reports (รายวิชา + รวมชั้น) and attendance
+     summary all extend .pp5-page, so changing this root makes EVERY
+     printable text default to pure #000 unless explicitly overridden
+     (e.g. status badges that need green/red). User spec 2026-05-20:
+     "เอกสารแบบนี้ต้องดำสนิท". */
+  color: #000;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.pp5-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed #d4d4d8;
+}
+.pp5-back {
+  font-size: 0.875rem;
+  color: #52525b;
+  text-decoration: underline;
+}
+.pp5-back:hover {
+  color: #18181b;
+}
+
+.pp5-header {
+  margin-bottom: 1.25rem;
+}
+.pp5-title {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+/* Single-line subject meta used on the simple-print header
+   (`/setup/score-structure → พิมพ์รายงาน`). Flex+gap lets segments stay
+   visually separated even when JSX collapses whitespace between them.
+   Wraps to a second line on narrow viewports. */
+.pp5-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.4rem 1.5rem;
+  margin: 0.4rem 0 0.75rem;
+  font-size: 12px;
+  color: #000;
+}
+.pp5-meta-line strong {
+  font-weight: 600;
+}
+/* School logo on the simple-print header (used when /reports/pp5 is
+   loaded with `?parts=scores` from /setup/score-structure, AND on
+   /reports/attendance monthly + summary headers). Sits above the title
+   within the .pp5-title block which centers its children.
+   !important + max-* constraints defeat Tailwind v4 preflight which
+   otherwise lets `img` expand to fill the content width at print time. */
+.pp5-header-logo {
+  display: block !important;
+  margin: 0 auto 0.4rem;
+  width: 56px !important;
+  height: 56px !important;
+  max-width: 56px !important;
+  max-height: 56px !important;
+  object-fit: contain;
+}
+.pp5-title h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* Compact header — used when the score table has >30 students and
+   would otherwise spill onto a second printed page. Logo moves
+   INLINE with the title (vs. stacked above) to reclaim ~60px of
+   vertical space; school name still gets its own row beneath via
+   `flex-basis: 100%` wrap. User spec 2026-05-22. */
+.pp5-header--compact {
+  margin-bottom: 0.5rem;
+}
+.pp5-header--compact .pp5-title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.4rem;
+}
+.pp5-header--compact .pp5-header-logo {
+  margin: 0 !important;
+  width: 32px !important;
+  height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+}
+.pp5-header--compact .pp5-title h1 {
+  font-size: 1.1rem;
+}
+.pp5-header--compact .pp5-school-name {
+  /* Hidden in compact mode — reclaims a full row (~22px) so >30-row
+     tables fit on one A4 page. The school name is still visible in
+     the page footer's signature block (ผู้อำนวยการ role mentions the
+     school) and on the cover page (full bundle mode). */
+  display: none;
+}
+
+/* Extra-compact header — applied IN ADDITION to `pp5-header--compact`
+   when class size >35. Trims logo/title/meta further to recover yet
+   more vertical space for the table. User spec 2026-05-22. */
+.pp5-header--xcompact {
+  margin-bottom: 0.25rem;
+}
+.pp5-header--xcompact .pp5-header-logo {
+  width: 24px !important;
+  height: 24px !important;
+  max-width: 24px !important;
+  max-height: 24px !important;
+}
+.pp5-header--xcompact .pp5-title h1 {
+  font-size: 1rem;
+}
+.pp5-header--xcompact .pp5-meta-line {
+  font-size: 11px;
+  margin: 0.2rem 0 0.4rem;
+}
+.pp5-school-name {
+  margin: 0.35rem 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #000;
+}
+.pp5-school-affiliation {
+  margin: 0.15rem 0 0;
+  font-size: 0.875rem;
+  color: #000;
+}
+
+/* ============================================================
+   Attendance reports header layout — scoped overrides
+   --------------------------------------------------------
+   Applied to /reports/attendance (monthly + summary) and
+   /reports/attendance-by-subject (both wrap their page in
+   `<main class="pp5-page att-page">`).
+   Behaviour per user spec 2026-05-22:
+     - All density tiers (incl. ≤30 roomy) show the logo INLINE
+       with the title text (vs. the default stacked layout).
+     - School name is ALWAYS visible — overrides the global
+       `.pp5-header--compact .pp5-school-name { display: none }`
+       rule that other reports use to save vertical space.
+     - Affiliation (สังกัด) is HIDDEN in compact + xcompact
+       (>30 / >35 students) instead — pivots which line gets
+       trimmed since attendance reports prefer to show the
+       school name as the primary identifier.
+   ============================================================ */
+.att-page .pp5-title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+}
+.att-page .pp5-header-logo {
+  margin: 0 !important;
+  width: 40px !important;
+  height: 40px !important;
+  max-width: 40px !important;
+  max-height: 40px !important;
+}
+.att-page .pp5-school-name,
+.att-page .pp5-school-affiliation {
+  flex-basis: 100%;
+}
+/* Override the global compact/xcompact rule that hides .pp5-school-name
+   on score/eval reports — attendance pages always show the name. */
+.att-page .pp5-header--compact .pp5-school-name,
+.att-page .pp5-header--xcompact .pp5-school-name {
+  display: block;
+}
+/* Hide สังกัด in compact/xcompact attendance reports (replaces the
+   removed school-name hide). */
+.att-page .pp5-header--compact .pp5-school-affiliation,
+.att-page .pp5-header--xcompact .pp5-school-affiliation {
+  display: none;
+}
+
+.pp5-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem 1.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e4e4e7;
+}
+.pp5-info-grid > div {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+.pp5-info-wide {
+  grid-column: span 2;
+}
+.pp5-label {
+  color: #000;
+  font-size: 0.8125rem;
+}
+
+.pp5-table {
+  width: 100%;
+  /* border-box so the 1px outer border is INCLUDED in the 100% width.
+     Without this the right border renders 1px past the table's content
+     box → print engine crops it (user spec 2026-05-19: "เส้นขอบตาราง
+     ทางขวา หายทั้ง 3 ตาราง"). border-collapse below makes individual
+     cell borders share with this outer border, so the box-sizing only
+     matters for the table element itself. */
+  box-sizing: border-box;
+  border-collapse: collapse;
+  border: 1px solid #18181b;
+  margin: 1rem 0;
+}
+.pp5-table th,
+.pp5-table td {
+  border: 1px solid #71717a;
+  padding: 0.25rem 0.5rem;
+  text-align: center;
+  font-size: 12px;
+}
+.pp5-table thead th {
+  background: #f4f4f5;
+  font-weight: 600;
+}
+.pp5-table .pp5-col-num {
+  width: 36px;
+}
+.pp5-table .pp5-col-code {
+  width: 80px;
+}
+.pp5-table .pp5-col-name {
+  min-width: 180px;
+  text-align: left;
+}
+.pp5-table .pp5-col-total {
+  width: 50px;
+}
+.pp5-table .pp5-col-grade {
+  width: 50px;
+}
+.pp5-table .pp5-name {
+  text-align: left;
+  padding-left: 0.75rem;
+}
+.pp5-table .pp5-maxrow {
+  background: #f9fafb;
+  font-weight: 600;
+}
+.pp5-table .pp5-group {
+  background: #eef2ff;
+}
+
+/* ============================================================
+   ปพ.5 รายวิชา · SPLIT LAYOUT for selector → live preview
+   ============================================================
+   Responsive via CSS container query — the layout reacts to the
+   ACTUAL width of the `.pp5-split-container` element (which already
+   excludes the admin app's sidebar), not the raw viewport width.
+
+   Two modes:
+     - Wide (container ≥ 900px) → 2-column split-pane
+         [ config 340px ] [ preview 1fr ]
+     - Narrow (container < 900px) → 1-column stack with tabs on top
+         [ ตั้งค่า | พรีวิว ]
+         [ <active pane>                ]
+
+   IMPORTANT — `container-type` lives on the WRAPPER (`.pp5-split-
+   container`), NOT on `.pp5-split` itself. We tried the latter and
+   browsers behaved unreliably: when the @container rule flipped
+   `.pp5-split`'s `display: grid` → `display: flex`, the element's own
+   size measurement appeared to oscillate and one of the two rules
+   inside the same block would intermittently fail to apply (e.g.
+   `.pp5-tabs { display: flex }` taking effect while `.pp5-split
+   { display: flex }` was ignored, leaving the tabs visible inside a
+   2-column grid). A separate wrapper that itself never changes shape
+   fixes this. */
+.pp5-split-container {
+  container-type: inline-size;
+  height: calc(100vh - 64px); /* minus admin header strip */
+}
+.pp5-split {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  grid-template-rows: 1fr;
+  gap: 1rem;
+  height: 100%;
+  padding: 1rem;
+}
+/* Tabs hidden in the wide layout — both panes show side-by-side. */
+.pp5-tabs {
+  display: none;
+}
+.pp5-split-left {
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  min-height: 0;
+}
+.pp5-split-right {
+  display: flex;
+  flex-direction: column;
+  background: #fafafa;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Narrow layout — kicks in when `.pp5-split` itself is narrower than
+   900px (admin sidebar already subtracted, so this is the actual
+   usable content width).
+
+   IMPORTANT: We FLIP the parent from grid → flex-column here. Grid was
+   buggy: `grid-template-rows: auto 1fr` was making row 1 (.pp5-tabs)
+   blow up to half the viewport instead of sizing to its 40px content,
+   squishing the preview pane below. Flex column is more predictable:
+     - `.pp5-tabs`        → flex-shrink:0 (natural height, ~40px)
+     - active pane        → flex:1 1 0 (fills the rest) */
+@container (max-width: 900px) {
+  .pp5-split {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+  .pp5-tabs {
+    display: flex;
+    flex-shrink: 0; /* hold natural height; never grow */
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+  .pp5-tab {
+    /* Force EQUAL width: flex-basis:0 + width:0 + min-width:0 defeats the
+       browser-default min-width:auto on <button>, which would otherwise
+       let the larger-rendered Thai glyph push one tab wider than the
+       other. With these all set to 0, both tabs share container width
+       50/50 regardless of text content. */
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    color: #52525b;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+    text-align: center;
+    cursor: pointer;
+    transition:
+      color 100ms ease,
+      border-color 100ms ease,
+      background 100ms ease;
+  }
+  .pp5-tab:hover:not(:disabled):not(.pp5-tab--active) {
+    color: #18181b;
+    background: #fafafa;
+  }
+  .pp5-tab--active {
+    color: #4f46e5; /* indigo-600 */
+    border-bottom-color: #4f46e5;
+  }
+  .pp5-tab:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+  /* In narrow mode the active pane fills the remaining flex column space.
+     We also need to RESET any min-height inheritance so the pane doesn't
+     refuse to shrink. */
+  .pp5-split-left,
+  .pp5-split-right {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+  .pp5-split--tab-config .pp5-split-right {
+    display: none;
+  }
+  .pp5-split--tab-preview .pp5-split-left {
+    display: none;
+  }
+}
+
+/* Preview toolbar — sits ABOVE the iframe frame. Holds zoom controls
+   (left) and the print button (right). Replaces the old aside-mounted
+   print button. */
+.pp5-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e4e4e7;
+  flex-shrink: 0;
+}
+.pp5-preview-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.pp5-zoom-label-text {
+  font-size: 0.75rem;
+  color: #52525b;
+  user-select: none;
+}
+.pp5-zoom-select {
+  height: 1.75rem;
+  padding: 0 0.4rem;
+  border: 1px solid #d4d4d8;
+  border-radius: 0.375rem;
+  background: #ffffff;
+  font-size: 0.75rem;
+  color: #18181b;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.pp5-zoom-select:hover:not(:disabled) {
+  border-color: #a1a1aa;
+}
+.pp5-zoom-select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px #6366f1;
+}
+.pp5-zoom-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* Preview frame (outer scroll container) — scrolls HORIZONTALLY when the
+   user zooms past fit and content overflows the container width.
+   VERTICAL scroll is intentionally disabled here so we don't get the
+   double-scrollbar look the user reported: the iframe inside has its
+   own document scrollbar for tall content (multi-page reports). Flexbox
+   centers the paper wrapper horizontally when zoom < fit (so the paper
+   sits in the middle of the container instead of sticking to the left). */
+.pp5-preview-frame {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #e2e8f0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+/* Paper wrapper — its width = visual (scaled) width of the iframe so the
+   layout box reflects what the user sees. Without this wrapper the
+   iframe element's BOX would stay at the natural 793px regardless of
+   transform: scale(), pushing content against the left edge of the
+   container even when visually narrower. */
+.pp5-preview-paper {
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.pp5-split-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  /* Solid bg — during iframe load the new document's admin chrome would
+     flash through a translucent overlay before our embed-mode <style>
+     parses + hides it. Fully opaque covers that. */
+  background: #ffffff;
+  pointer-events: none;
+}
+/* "← ไปที่แท็ปตั้งค่า" shortcut button rendered inside the empty-state
+   message. On WIDE containers the config pane is already visible on the
+   left so this button is redundant — hide it via the container query
+   below. */
+.pp5-empty-back-btn {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  background: #f4f4f5;
+  color: #3f3f46;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+.pp5-empty-back-btn:hover {
+  background: #e4e4e7;
+}
+/* Hide the shortcut in wide layout — config pane is visible already. */
+@container (min-width: 900.01px) {
+  .pp5-empty-back-btn {
+    display: none;
+  }
+}
+
+.pp5-split-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+}
+
+/* ============================================================
+   ปพ.5 รายวิชา · COVER PAGE (page 1, designed to fit one A4)
+   ============================================================ */
+.pp5-cover {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #000;
+}
+.pp5-cover-head {
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+/* School logo on the ปพ.5 cover — sits above the title.
+   `object-contain` keeps aspect ratio whatever shape the school uploads.
+   !important + max-* constraints defeat Tailwind v4 preflight which
+   otherwise lets `img` expand to fill the content width at print time. */
+.pp5-cover-logo {
+  display: block !important;
+  margin: 0 auto 0.5rem;
+  width: 64px !important;
+  height: 64px !important;
+  max-width: 64px !important;
+  max-height: 64px !important;
+  object-fit: contain;
+}
+.pp5-cover-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+}
+.pp5-cover-school {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0.2rem 0 0;
+}
+.pp5-cover-affiliation {
+  font-size: 12px;
+  margin: 0.15rem 0 0;
+  color: #000;
+}
+
+/* Meta info — a real table so columns align cleanly.
+   table-layout fixed so widths are predictable, not content-driven. */
+.pp5-cover-meta {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0 0.75rem;
+  table-layout: auto;
+}
+.pp5-cover-meta td {
+  padding: 0.18rem 0.4rem 0.18rem 0;
+  vertical-align: baseline;
+  font-size: 12px;
+}
+.pp5-cover-meta .pp5-cover-lbl {
+  width: 1%;
+  white-space: nowrap;
+  font-weight: 500;
+  color: #000;
+  padding-right: 0.5rem;
+}
+.pp5-cover-meta .pp5-cover-val {
+  border-bottom: 1px dotted #71717a;
+  padding-bottom: 2px;
+  padding-right: 1rem;
+  min-width: 4rem;
+}
+.pp5-cover-check {
+  display: inline-block;
+  margin-right: 1.5rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Summary tables (2 of them) */
+.pp5-cover-section {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  margin: 0.6rem 0 0.3rem;
+}
+.pp5-cover-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #18181b;
+  margin-bottom: 0.5rem;
+}
+.pp5-cover-table th,
+.pp5-cover-table td {
+  border: 1px solid #71717a;
+  padding: 0.15rem 0.25rem;
+  text-align: center;
+  font-size: 10.5px;
+  vertical-align: middle;
+  line-height: 1.25;
+}
+.pp5-cover-table thead th {
+  background: #f4f4f5;
+  font-weight: 600;
+}
+.pp5-cover-rowhead {
+  background: #f4f4f5 !important;
+  width: 58px;
+  font-size: 10px !important;
+}
+.pp5-cover-group {
+  background: #eef2ff !important;
+}
+.pp5-cover-pctlabel {
+  background: #fafafa;
+  text-align: right;
+  font-size: 10px;
+  font-weight: 500;
+  padding-right: 0.5rem !important;
+}
+
+/* Approval signatures */
+.pp5-cover-approval {
+  margin-top: 0.6rem;
+  page-break-inside: avoid;
+}
+.pp5-cover-approval-title {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+.pp5-cover-sig-row {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+.pp5-cover-sig {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.pp5-cover-sig p {
+  margin: 0;
+}
+.pp5-cover-sig-name {
+  font-weight: 500;
+}
+.pp5-cover-sig-decision {
+  text-align: left;
+  padding-left: 1rem;
+}
+.pp5-cover-sig-decision .pp5-cover-check {
+  margin-right: 1rem;
+}
+
+/* Page break helper — forces the next sibling onto a new printed page */
+.pp5-page-break {
+  break-before: page;
+  page-break-before: always;
+  height: 0;
+}
+
+/* ============================================================
+   ตารางเวลาเรียนรายสัปดาห์ (weekly attendance grid)
+   Header: ที่ · ชื่อ-นามสกุล · สัปดาห์ N (with date range) / slot numbers
+   Cells:  / (มา) · ข (ขาด) · ล (ลา) · — (ว่าง)
+   ============================================================ */
+.pp5-weekly-grid {
+  margin-bottom: 1rem;
+}
+.pp5-weekly-grid-table {
+  table-layout: auto;
+  font-size: 11px;
+}
+.pp5-weekly-grid-table th,
+.pp5-weekly-grid-table td {
+  border: 1px solid #71717a;
+  padding: 0.15rem 0.25rem;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 10.5px;
+  line-height: 1.25;
+}
+.pp5-weekly-grid-table .pp5-wk-col-num {
+  width: 32px;
+}
+.pp5-weekly-grid-table .pp5-wk-col-fullname {
+  min-width: 160px;
+  text-align: left;
+  padding-left: 0.5rem;
+}
+.pp5-weekly-grid-table .pp5-wk-week-head {
+  background: #f4f4f5;
+  font-weight: 600;
+  font-size: 10.5px;
+  line-height: 1.3;
+}
+.pp5-weekly-grid-table .pp5-wk-week-date {
+  font-size: 9px;
+  font-weight: 400;
+  color: #000;
+  margin-top: 0.1rem;
+}
+.pp5-weekly-grid-table .pp5-wk-slotnum {
+  background: #fafafa;
+  font-size: 9.5px;
+  font-weight: 500;
+  width: 26px;
+}
+.pp5-weekly-grid-table .pp5-wk-cell {
+  font-size: 11px;
+  font-weight: 600;
+}
+.pp5-weekly-grid-table .pp5-wk-cell-left {
+  text-align: left;
+  padding-left: 0.5rem;
+  font-weight: 400;
+}
+.pp5-weekly-grid-table .pp5-wk-cell-present {
+  background: #ecfdf5;
+  color: #047857;
+}
+.pp5-weekly-grid-table .pp5-wk-cell-absent {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.pp5-weekly-grid-table .pp5-wk-cell-leave {
+  background: #fffbeb;
+  color: #b45309;
+}
+.pp5-weekly-grid-table .pp5-wk-cell-empty {
+  color: #a1a1aa;
+}
+
+@media print {
+  .pp5-weekly-grid-table {
+    font-size: 9.5px;
+  }
+  .pp5-weekly-grid-table th,
+  .pp5-weekly-grid-table td {
+    padding: 0.1rem 0.15rem;
+    font-size: 9px;
+  }
+  .pp5-weekly-grid-table .pp5-wk-week-head {
+    font-size: 9.5px;
+  }
+  .pp5-weekly-grid-table .pp5-wk-week-date {
+    font-size: 8px;
+  }
+  .pp5-weekly-grid-table .pp5-wk-slotnum {
+    font-size: 8.5px;
+  }
+}
+
+/* Eval section — characteristics + reading-thinking + competency */
+.pp5-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #000;
+  margin: 1.5rem 0 0.5rem;
+  page-break-after: avoid;
+}
+.pp5-section-hint {
+  font-weight: 400;
+  font-size: 11px;
+  color: #000;
+}
+.pp5-table-eval th,
+.pp5-table-eval td {
+  font-size: 11px;
+  padding: 0.2rem 0.35rem;
+}
+.pp5-legend-small {
+  font-size: 10px;
+  color: #000;
+  margin: 0.25rem 0 0;
+  line-height: 1.4;
+}
+
+.pp5-footer {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 2.5rem;
+  page-break-inside: avoid;
+}
+.pp5-sig-block {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.75;
+}
+.pp5-sig-name {
+  color: #000;
+  font-size: 11px;
+}
+
+/* Compact footer — paired with `.pp5-header--compact` when class >30
+   students. Trims top-margin (2.5rem → 0.75rem) and line-height
+   (1.75 → 1.35) to reclaim ~30–40px of vertical space below the
+   table. User spec 2026-05-22. */
+.pp5-footer--compact {
+  margin-top: 0.75rem;
+}
+.pp5-footer--compact .pp5-sig-block {
+  line-height: 1.35;
+  font-size: 11px;
+}
+.pp5-footer--compact .pp5-sig-name {
+  font-size: 10px;
+}
+
+/* Extra-compact footer — paired with `pp5-header--xcompact` when
+   class size >35. Trims signature block sizes further than the
+   compact mode. User spec 2026-05-22. */
+.pp5-footer--xcompact {
+  margin-top: 0.5rem;
+  gap: 0.5rem;
+}
+.pp5-footer--xcompact .pp5-sig-block {
+  font-size: 10px;
+  line-height: 1.25;
+}
+.pp5-footer--xcompact .pp5-sig-block p {
+  margin: 0.1rem 0;
+}
+.pp5-footer--xcompact .pp5-sig-name {
+  font-size: 9px;
+}
+
+/* =====================================================================
+   ปพ.5 รวมชั้น — Cover page layout (matches the standard ปพ.5 (รวม)
+   school form per user spec 2026-05-19).
+   ===================================================================== */
+.pp5-class-cover {
+  font-size: 13px;
+  line-height: 1.4;
+}
+/* (Screen-mode preview padding is now provided by the paper-box layout
+   injected from page.tsx embed style — `.pp5-page-content { padding:
+   14mm 12mm }` gives every preview page consistent A4-margin-like inset.
+   This used to be a per-cover override, but the paper-box approach
+   matches /reports/pp5 and is simpler.) */
+
+/* Monthly attendance section in the ปพ.5 รวมชั้น bundle. The default
+   screen-mode .att-table widths (designed for the standalone attendance
+   report rendered on a 1100px-wide .pp5-page) would overflow the 210mm
+   paper-box used in the bundle preview. Mirror the print-mode compact
+   widths in screen so the table fits cleanly inside one A4 portrait
+   page in both modes. */
+.pp5-class-monthly-att {
+  /* Per-page header styling — reuse .att-page-header conventions but
+     keep the spacing tight so the table starts near the top. */
+  font-size: 11px;
+}
+.pp5-class-monthly-att .att-page-header {
+  margin-bottom: 0.4rem;
+}
+.pp5-class-monthly-att .att-table {
+  font-size: 8.5px;
+  margin: 0.25rem auto;
+}
+.pp5-class-monthly-att .att-table th,
+.pp5-class-monthly-att .att-table td {
+  padding: 0.1rem 0.15rem;
+}
+.pp5-class-monthly-att .att-table .att-col-num {
+  width: 18px;
+}
+.pp5-class-monthly-att .att-table .att-col-name {
+  /* Widened from 115 → 150px (still +30% over the standalone-attendance
+     115px default) but kept ~15px short of the 702px content area edge.
+     5px wasn't enough — 31-day months pack 13 extra day-col px and at
+     88% zoom the subpixel rounding occasionally ate the right border.
+     15px buffer gives ~7.5px each side after auto-centering, comfortably
+     above any rendering quirk. User reports 2026-05-20: "บางตาราง
+     ก็แสดงได้ บางตารางขอบขวาเส้นยังหายอยู่". */
+  width: 150px;
+}
+.pp5-class-monthly-att .att-table .att-col-sum {
+  width: 24px;
+}
+.pp5-class-monthly-att .att-table .att-col-pct {
+  width: 44px;
+}
+.pp5-class-monthly-att .att-table .att-day,
+.pp5-class-monthly-att .att-table .att-day-head {
+  width: 13px;
+  padding: 0.05rem 0;
+  font-size: 7px;
+}
+.pp5-class-monthly-att .att-table tbody tr {
+  height: 18px;
+}
+.pp5-class-monthly-att .att-table tbody .att-name {
+  font-size: 13px;
+}
+
+/* Attendance summary section in the ปพ.5 รวมชั้น bundle. Uses the
+   shared <AttendanceSummarySection> which renders an .att-summary-table
+   wrapped in a <div class="overflow-x-auto p-3">. Tighten the wrapper
+   padding so the paper-box doesn't have a visible white inset on top of
+   .pp5-page-content's 14mm 12mm padding. */
+.pp5-class-att-summary .att-page-header {
+  margin-bottom: 0.4rem;
+}
+.pp5-class-att-summary > div {
+  /* Defeat the inner div's `p-3` padding so the table fills the page
+     content area (the .pp5-page-content paper-box already provides the
+     visual inset). overflow-x-auto stays — wide year-summary tables
+     can scroll horizontally in screen mode if needed. */
+  padding: 0 !important;
+}
+.pp5-class-att-summary .att-summary-table {
+  /* Slightly smaller font for the paper-box context — default screen
+     font is 12px which gets cramped at 11-month table width. */
+  font-size: 10px;
+  /* The default `.att-summary-table` has `width: 100%` without
+     box-sizing border-box. With `border-collapse: collapse`, the 1px
+     outer border still sits OUTSIDE the 100% content area in some
+     browsers → table renders ~2px wider than parent → right border
+     gets clipped at the paper-box padding edge. Reduce explicit width
+     so there's always ~4-6px of safety buffer. User report 2026-05-20:
+     "ขอบขวาตารางเส้นหาย". */
+  width: calc(100% - 6px);
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+.pp5-class-att-summary .att-summary-table .att-name {
+  font-size: 11px;
+}
+/* Tighter cell padding so the 30-row table fits more comfortably on
+   one A4 portrait page. Default .att-summary-table padding is 0.3rem
+   0.4rem ≈ 24px row height; with 0.15rem 0.25rem ≈ 19px row height
+   we save ~150px vertically on a 30-row table. User spec 2026-05-20:
+   "ลดความสูงของช่องลงนิดหน่อย". */
+.pp5-class-att-summary .att-summary-table th,
+.pp5-class-att-summary .att-summary-table td {
+  padding: 0.15rem 0.25rem;
+}
+/* Explicit col widths so the 11-month full-year table fits comfortably
+   in the ~702px paper-box content area AND ร้อยละ has room for "100.0":
+     num 26 + name 130 + 11×month 21 (231) + 4×sum 26 (104) + pct 56
+   = 547px (fits 702 with ~155px slack). Month col tightened from
+   28→24→22→21 per user spec 2026-05-20. */
+.pp5-class-att-summary .att-summary-table .att-col-num {
+  width: 26px;
+}
+.pp5-class-att-summary .att-summary-table .att-col-name {
+  width: 130px;
+}
+.pp5-class-att-summary .att-summary-table .att-month-head,
+.pp5-class-att-summary .att-summary-table .att-month-cell {
+  width: 21px;
+}
+/* Override the global 11px month-header font (declared at L1342) — the
+   22px-wide column would otherwise clip "พ.ค."/"มิ.ย." text. 10px matches
+   the table's body font for visual consistency too. */
+.pp5-class-att-summary .att-summary-table .att-month-head {
+  font-size: 10px;
+}
+.pp5-class-att-summary .att-summary-table .att-sum-col {
+  width: 26px;
+}
+.pp5-class-att-summary .att-summary-table .att-pct-col {
+  width: 56px;
+}
+
+.pp5-class-top {
+  position: relative;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.pp5-class-logo {
+  display: block !important;
+  margin: 0 auto 0.4rem;
+  width: 64px !important;
+  height: 64px !important;
+  max-width: 64px !important;
+  max-height: 64px !important;
+  object-fit: contain;
+}
+.pp5-class-label {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+}
+.pp5-class-title {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0.25rem 0;
+}
+.pp5-class-school {
+  text-align: center;
+  font-size: 13px;
+  margin: 0.25rem 0;
+}
+.pp5-class-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 2rem;
+  margin: 0.2rem 0;
+  font-size: 13px;
+}
+.pp5-class-meta strong {
+  font-weight: 600;
+}
+
+/* Subject grade-distribution table — 13 columns total:
+   ที่ · รหัสวิชา · รายวิชา · จำนวนนักเรียน · 8 grade buckets · หมายเหตุ.
+   `table-layout: fixed` + <colgroup> in the JSX lock each column to its
+   exact percentage so headers like "จำนวนนักเรียน" wrap to multiple lines
+   instead of stretching the column. */
+.pp5-class-subjects {
+  margin: 0.75rem 0;
+  font-size: 12px;
+  table-layout: fixed;
+  width: 100%;
+}
+/* (Screen preview keeps `.pp5-page`'s 1.5rem side padding visible so
+   the iframe looks like a proper A4 page with visible margins — user
+   spec 2026-05-20: "ตอนนี้มันชิดขอบซ้ายและขวาเลย ดี๋ยวผู้ใช้จะเข้าใจผิด".
+   In print, `.pp5-page` already has padding:0 and the table fills the
+   area inside the @page margin, so no override needed there.) */
+.pp5-class-subjects th,
+.pp5-class-subjects td {
+  padding: 0.15rem 0.3rem;
+}
+.pp5-class-subjects .pp5-class-subj-name {
+  text-align: left;
+  padding-left: 0.5rem;
+  /* Long subject names are truncated with "…" instead of wrapping or
+     expanding the column. `table-layout: fixed` on .pp5-class-subjects
+     keeps the column locked at 30%, so the 3-part CSS truncation pattern
+     (nowrap + hidden + ellipsis) applies cleanly. User spec 2026-05-20:
+     "หากชื่อยาวล้นช่องให้ย่อเลย ไม่ต้องขยายช่องหรือขึ้นบรรทัดใหม่". */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pp5-class-subhead {
+  font-size: 10px;
+  font-weight: 400;
+  color: #000;
+}
+
+/* Eval summary block below the subject table — 2-column layout (user
+   spec 2026-05-19): chars + reading-thinking on the left, competency +
+   activity (pass/fail) on the right (replaces the dropped student-count
+   table). */
+.pp5-class-evals-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+}
+.pp5-class-evals-col {
+  /* `min-width: 0` is the magic — grid items default to `min-width: auto`
+     (= min-content), so the eval table's intrinsic width would force the
+     cell wider than the 1fr share and break the 2-column layout. With
+     min-width: 0 the cell can shrink to its 1fr allocation. */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.pp5-class-eval {
+  margin: 0;
+  font-size: 11px;
+}
+.pp5-class-eval th,
+.pp5-class-eval td {
+  padding: 0.15rem 0.25rem;
+}
+.pp5-class-eval-title {
+  background: #f4f4f5;
+  font-weight: 600;
+  font-size: 11px;
+}
+.pp5-class-count {
+  margin: 0;
+  font-size: 11px;
+}
+.pp5-class-count th,
+.pp5-class-count td {
+  padding: 0.2rem 0.35rem;
+}
+.pp5-class-count-lbl {
+  text-align: left;
+  padding-left: 0.5rem;
+  white-space: nowrap;
+}
+
+/* Approval signature block — matches standard ปพ.5 (รวม) form 2026-05-20:
+   Two labeled sections ("การอนุมัติผลการเรียน" + "เสนอเพื่อพิจารณา"),
+   each with its own row of signature cells. */
+.pp5-class-approval {
+  margin-top: 1rem;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.pp5-class-approval-section {
+  font-weight: 600;
+  margin: 0.8rem 0 0.5rem;
+}
+/* Section 1 — homeroom(s) + assessment officer in a single row.
+   grid-template-columns is set inline (2fr or 3fr depending on cell count)
+   so the cells always distribute evenly. */
+.pp5-class-approve-row {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+/* Section 2 — 2 columns: deputy signature (left) + approval decision + director sig (right) */
+.pp5-class-propose-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+/* Each signature cell: 3 stacked lines (ลงชื่อ, name, role) centered. */
+.pp5-class-sig-cell {
+  text-align: center;
+}
+.pp5-class-sig-cell p {
+  margin: 0;
+}
+.pp5-class-sig-cell .pp5-class-sig-name {
+  color: #000;
+  margin-top: 0.15rem;
+  font-size: 14px;
+  /* font-weight 500 makes the strokes thicker so the text reads as solid
+     black rather than gray (anti-aliasing on thin 400-weight text can
+     visually appear washed out at this size). */
+  font-weight: 500;
+}
+.pp5-class-sig-cell .pp5-class-sig-role {
+  margin-top: 0.05rem;
+  font-size: 12px;
+}
+/* Decision cell — checkboxes on top, then a visible gap, then ผอ. signature
+   sitting lower (matches the standard form layout where the director sig
+   is clearly separated below the checkboxes). */
+.pp5-class-decision-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1.8rem;
+}
+.pp5-class-decision-line {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  margin: 0;
+  /* Bump up from the inherited 12px so the approval checkboxes and labels
+     ("☐ อนุมัติ" / "☐ ไม่อนุมัติ") stand out — matches the visual weight
+     of the signature names (also 14px). The font-size applies to BOTH
+     the ☐ unicode char and the Thai text in the same span. */
+  font-size: 14px;
+}
+.pp5-class-sig-director {
+  margin-top: 0;
+}
+
+/* =====================================================================
+   Attendance report — wider, landscape A4 (extends .pp5-page)
+   =====================================================================
+*/
+.att-page {
+  max-width: 1100px; /* same as ปพ.5 — portrait print */
+  page: att-portrait-narrow;
+}
+/* Attendance info-grid uses 4 columns so วันทำการ fits next to เดือน. */
+.att-info-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.att-table {
+  /* Shrink-fit so day columns honor their explicit width instead of being
+     stretched to fill 100%. Centered with auto margins. */
+  width: auto;
+  max-width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #18181b;
+  margin: 1rem auto;
+  table-layout: fixed;
+  font-size: 11px;
+}
+.att-table th,
+.att-table td {
+  border: 1px solid #71717a;
+  padding: 0.15rem 0.25rem;
+  text-align: center;
+}
+.att-table tbody tr {
+  height: 22px;
+}
+.att-table tbody td {
+  padding: 0.3rem 0.25rem;
+}
+.att-table thead th {
+  background: #f4f4f5;
+  font-weight: 600;
+}
+.att-table .att-col-num {
+  width: 26px;
+}
+.att-table .att-col-code {
+  width: 64px;
+}
+.att-table .att-col-name {
+  width: 110px;
+  text-align: left;
+}
+.att-table .att-name {
+  text-align: left;
+  padding-left: 0.4rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.att-table .att-col-sum {
+  width: 32px;
+}
+.att-table .att-col-pct {
+  width: 72px;
+}
+.att-table .att-day-head,
+.att-table .att-day {
+  width: 20px;
+  font-size: 10px;
+}
+.att-table .att-group {
+  background: #eef2ff;
+}
+.att-table .att-weekend {
+  background: #fef9c3; /* soft yellow */
+}
+.att-table .att-holiday {
+  background: #fee2e2; /* soft red */
+}
+.att-table .att-nonwork {
+  background: #f4f4f5; /* zinc-100 */
+}
+.att-table .att-empty {
+  padding: 1.5rem;
+  text-align: center;
+  color: #71717a;
+  font-style: italic;
+}
+
+/* Per-subject attendance — week group header (stacks "N" + date range) */
+.att-table .att-wk-head {
+  background: #eef2ff;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.1rem;
+}
+.att-table .att-wk-date {
+  font-size: 7.5px;
+  font-weight: 400;
+  color: #000;
+  margin-top: 0.05rem;
+}
+.att-table .att-wk-slot {
+  background: #f4f4f5;
+  font-size: 7.5px;
+  font-weight: 500;
+  width: 18px;
+  padding: 0.05rem;
+}
+/* Dense-slot subjects (5+ slots/week × 10 weeks/page = 50+ slot cols
+   per page) overflow the A4 portrait content area (~718px in print,
+   ~720px in the screen-iframe paper-box preview) at the default
+   18/14px slot widths. Shrinks the slot cell AND the leading 2 cols
+   so the table fits. Math (print mode, page 1 with name col):
+     14(num) + 85(name) + 50×10 = 599px ≤ 718px (119px buffer).
+   Math (print mode, page 2 with summary cols):
+     14(num) + 50×10 + 24×3 + 44 = 630px ≤ 718px (88px buffer).
+   Placed OUTSIDE @media print so the same constraints apply to the
+   screen iframe preview (which doesn't activate @media print) — keeps
+   what the user sees in the print dialog identical to what the
+   embedded preview shows. User spec 2026-05-22: "เส้นขอบขวาของตาราง
+   หาย ในวิชาที่มี 5 ช่อง/สัปดาห์". */
+.att-table.att-table--dense-slots .att-wk-slot {
+  width: 10px;
+  font-size: 6px;
+  padding: 0.02rem 0;
+}
+.att-table.att-table--dense-slots .att-col-num {
+  width: 14px;
+}
+.att-table.att-table--dense-slots .att-col-name {
+  width: 85px;
+}
+/* Roomy + 2.5-credit subjects only — 5 slots/week × 10 weeks = 50 cells.
+   Page 1 budget (print, .att-page .att-table--roomy override):
+     14(num) + 95(name) + 50×12 = 709px ≤ 718px (9px buffer).
+   3-credit subjects (6 slots/week = 60 cells) would overflow at this
+   slot width, so the rule keys off `data-slots-per-week="5"` exactly.
+   User spec 2026-05-22: "ในหน้าพิมพ์รายงาน บันทึกเวลาเรียนรายวิชาของ
+   แบบที่น้อยกว่า30คน ความกว้างของกระดาษยังมีพื้นที่ ให้ขยายคอลัมภ์รายคาบ
+   ด้วย เฉพาะวิชาที่ 2.5 หน่วยกิต". */
+.att-page-section .att-table--roomy[data-slots-per-week="5"] .att-wk-slot {
+  width: 12px;
+  font-size: 7px;
+}
+/* Student names get a bigger font than other cells for readability —
+   the rest of the table can stay compact. */
+.att-table tbody .att-name {
+  font-size: 13px;
+}
+/* แบบบันทึกเวลาเรียนรายวิชา ONLY — smaller student name font than the
+   daily attendance report. `.att-page-section` is exclusive to
+   /reports/attendance-by-subject (the daily attendance report's
+   table sits directly inside `.att-page` without this wrapper).
+   Applies to both screen iframe preview AND print mode (rule sits
+   outside @media print). User spec 2026-05-22 — daily report keeps
+   13/14px since its name column is wider; by-subject squeezes the
+   name to free up more room for slot cells. */
+.att-page-section .att-table tbody .att-name {
+  font-size: 12px;
+}
+
+/* Score-page header (Pp5ScoreHeader in bundle) — uniform 15px font for
+   title + meta line, matching the att-page-header on weekly grid pages
+   (user spec 2026-05-19 "ในหน้าผลการเรียนก็ให้แก้เช่นกัน"). Applied
+   OUTSIDE @media print so the preview iframe (screen mode) and actual
+   print output both use the same size. */
+.pp5-header--score h1 {
+  font-size: 14px;
+}
+.pp5-header--score .pp5-meta-line {
+  font-size: 15px;
+}
+/* Eval-page header — shrinks the h1 to match the score page's 15px so
+   the 3 eval sections don't look oversized next to the per-subject
+   score pages. Applies to BOTH the ปพ.5 bundle (รายวิชา + รวมชั้น)
+   EvalReportPage AND the independent /reports/student-eval print, so
+   titles stay consistent across every entry point that shows the
+   "สรุปผลการประเมิน..." heading. User spec 2026-05-22: original ask
+   was "ลดให้เท่ากับหัวเรื่องผลการเรียน · แก้ในเมนูพิมพ์ ปพ.5 รายวิชา
+   และรวมชั้น"; follow-up extended to student-eval ("แก้เป็น สรุปผล
+   ด้วย") so dropping the parent-class scope here matches that intent. */
+.pp5-header--eval h1 {
+  font-size: 14px;
+}
+
+/* Summary table — uniform font across header + data cells (user spec
+   2026-05-19: "สรุปเวลาเรียน แก้ขนาดฟอนต์ทั้งหมดที่อยู่ในตาราง"). Applied
+   OUTSIDE @media print so it works in both the on-screen preview iframe
+   and the actual print output (the preview from pp5-selector-form renders
+   in screen mode — @media print rules don't fire there). Scoped to
+   `.att-table--summary` so the weekly grid + daily attendance keep their
+   dense 8.5px layout. */
+.att-table--summary,
+.att-table--summary th,
+.att-table--summary td {
+  font-size: 13px;
+}
+.att-table--summary.att-table--roomy,
+.att-table--summary.att-table--roomy th,
+.att-table--summary.att-table--roomy td {
+  font-size: 14px;
+}
+
+/* Per-subject attendance — split into 2 sub-tables (10 weeks each).
+   The second .att-page-section forces a print page break.
+   No padding-top — modern Chrome honors named @page margins reliably,
+   and the user wants this print's top space matched to the daily
+   attendance print (~8mm above the title). */
+.att-page-section {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.att-page-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+  text-align: center;
+}
+.att-page-break {
+  break-before: page !important;
+  page-break-before: always !important;
+}
+
+/* Signatures repeat on every printed page — add a 1-line gap above so the
+   row isn't crammed against the table. */
+.att-page-footer {
+  margin-top: 1.5em;
+}
+
+/* 4-row header repeated on each printed page */
+.att-page-header {
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+/* School logo above the title in att-page-header (per-subject + monthly
+   attendance prints). Use !important + max-* constraints to defeat
+   Tailwind v4 preflight (`img { max-width: 100%; height: auto }`) which
+   otherwise lets the image expand to the full content area at print time. */
+.att-page-header .att-page-logo {
+  display: block !important;
+  margin: 0 auto 0.3rem;
+  width: 48px !important;
+  height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
+  object-fit: contain;
+}
+.att-page-header .att-page-title {
+  /* Bumped to 15px per user spec 2026-05-19 ("เพิ่มขนาดฟอนต์ส่วนหัวเป็น
+     15 px"). Title + meta line share the same size for visual balance
+     after the school + affiliation rows were removed. */
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.3;
+}
+.att-page-header .att-page-meta {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  margin: 0.3rem 0;
+  font-size: 15px;
+  flex-wrap: wrap;
+  gap: 0.4rem 2rem;
+}
+.att-page-header .att-page-school {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+.att-page-header .att-page-affiliation {
+  font-size: 11px;
+  margin: 0.1rem 0 0;
+}
+
+@media print {
+  /* Reinforce the page-break for the second sub-table; some browsers ignore
+     the screen-mode rule above unless we explicitly repeat it for print. */
+  .att-page-break {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+  /* Keep each sub-table's content on one page (don't split a row across pages) */
+  .att-page-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+/* Full-year attendance summary table (used on /setup/attendance summary tab
+   and on the printed summary report). Wider name column; one col per month.
+   Explicit border-width/style/color so Tailwind v4 preflight's
+   `border-width: 0` reset doesn't blank out the table borders. */
+.att-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+  table-layout: fixed;
+  font-size: 12px;
+  color: #000;
+}
+.att-summary-table th,
+.att-summary-table td {
+  border-width: 1px;
+  border-style: solid;
+  border-color: #a1a1aa; /* zinc-400 — darker than before for clarity */
+  padding: 0.3rem 0.4rem;
+  text-align: center;
+  vertical-align: middle;
+}
+.att-summary-table thead th {
+  background: #f4f4f5;
+  font-weight: 600;
+}
+.att-summary-table .att-group {
+  background: #dbeafe; /* blue-100 — keep background tint for visual grouping */
+  color: #000; /* user spec 2026-05-22 — solid black text on official forms */
+  font-weight: 700;
+}
+.att-summary-table .att-col-num {
+  width: 36px;
+}
+.att-summary-table .att-col-name {
+  width: 180px;
+  text-align: left;
+}
+.att-summary-table .att-name {
+  text-align: left;
+  padding-left: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.att-summary-table .att-month-head {
+  font-size: 11px;
+  font-weight: 600;
+}
+.att-summary-table .att-workday-row th {
+  background: #fef9c3; /* yellow-100 — keep background tint for emphasis */
+  color: #000; /* user spec 2026-05-22 — solid black text */
+  font-weight: 600;
+}
+.att-summary-table .att-workday-label {
+  text-align: right;
+  padding-right: 0.6rem;
+  font-weight: 600;
+}
+.att-summary-table tbody tr:hover {
+  background: #f4f4f5; /* zinc-100 */
+}
+.att-summary-table tbody td {
+  font-variant-numeric: tabular-nums;
+}
+.att-summary-table .att-empty {
+  padding: 1.5rem;
+  text-align: center;
+  color: #71717a;
+  font-style: italic;
+}
+
+/* Screen-mode visual page break — preview shows a labeled dashed divider
+   between adjacent .pp5-page-content blocks so users can clearly see
+   where one printed page ends and the next begins. In print mode the
+   actual `break-before: page` (below) handles physical pagination, and
+   the ::before label is hidden so it doesn't print. User spec 2026-05-20:
+   "หน้าพรีวิวให้แสดงแบบแยกหน้าชัดเจน". */
+@media screen {
+  .pp5-page-content + .pp5-page-content {
+    position: relative;
+    margin-top: 3rem;
+    padding-top: 3rem;
+    border-top: 1px dashed #a1a1aa;
+  }
+  .pp5-page-content + .pp5-page-content::before {
+    content: "— หน้าใหม่ —";
+    position: absolute;
+    top: -0.7em;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ffffff;
+    padding: 0 0.75rem;
+    font-size: 11px;
+    color: #71717a;
+    font-weight: 500;
+  }
+}
+
+/* Hide elements that shouldn't appear when printing */
+@media print {
+  /* Hide the admin sidebar + global header strip via known selectors */
+  aside,
+  nav,
+  .no-print,
+  [data-no-print="true"] {
+    display: none !important;
+  }
+  /* Reset main padding so the report sits at the page margin */
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  .pp5-page {
+    padding: 0;
+    max-width: none;
+    font-size: 12px;
+  }
+  /* A4 portrait — tight margins (user spec 2026-05-19):
+     top 7mm  · sides 12mm · bottom 5mm
+     Note: 7mm top lands INSIDE Chrome PDF's typical hardware no-print
+     zone (~10mm) — logo may be partially clipped at the top on some
+     school printers. Verify on your target printer; bump back to 10mm
+     if clipping is unacceptable. */
+  @page {
+    size: A4 portrait;
+    margin: 7mm 12mm 5mm;
+  }
+  /* Each .pp5-page-content wrapper is one logical printed page. The first
+     wrapper stays on page 1; every subsequent one starts a new page. */
+  .pp5-page-content + .pp5-page-content {
+    break-before: page;
+    page-break-before: always;
+  }
+  /* Modifier: weekly attendance grid pages in the ปพ.5 bundle use a
+     dedicated @page rule (pp5-bundle-weekly) with 15mm top margin —
+     deeper than the standalone attendance reports' 7mm — per user spec
+     2026-05-19 ("หน้าปกและเวลาเรียน top แก้เป็น 15mm"). Sides stay at
+     10mm so the 10-week grid still fits. */
+  .pp5-page-content-wide {
+    page: pp5-bundle-weekly;
+  }
+  /* Cover page in the ปพ.5 bundle uses its own @page with 15mm top
+     margin. Score pages (NumericTable + PrimaryAnnualSummary in bundle
+     mode) share the same 15mm-top page rule via `.pp5-page-content-score`.
+     Eval pages and simple-print stay on the default 7mm top. */
+  .pp5-cover {
+    page: pp5-bundle-cover;
+  }
+  .pp5-page-content-score {
+    page: pp5-bundle-score;
+  }
+  @page pp5-bundle-cover {
+    size: A4 portrait;
+    margin: 15mm 12mm 5mm;
+  }
+  @page pp5-bundle-weekly {
+    size: A4 portrait;
+    margin: 15mm 10mm 5mm;
+  }
+  @page pp5-bundle-score {
+    size: A4 portrait;
+    margin: 15mm 12mm 5mm;
+  }
+  /* ปพ.5 รวมชั้น cover — 15mm top margin (vs default 7mm) so the logo
+     + header don't crowd the top edge. User spec 2026-05-20: "ส่วนหัว
+     กระดาษเท่าไหร่ทำไมดูชิดขอบบนมากไป". Sides stay at 12mm; bottom 5mm. */
+  .pp5-class-cover {
+    page: pp5-class-cover-page;
+  }
+  @page pp5-class-cover-page {
+    size: A4 portrait;
+    margin: 15mm 12mm 5mm;
+  }
+
+  /* Cover compactness — every section shrinks slightly so the whole cover
+     consistently fits inside the printable area of one A4 portrait page.
+     Sizes bumped ~2px from the original baseline per user request — still
+     fits one page (there's empty space below the signatures) but easier
+     to read on printed paper.
+     `.pp5-cover` also gets extra horizontal padding so the content isn't
+     hugging the page edges; the default @page margin is 12mm sides which
+     felt cramped — adding 8mm inset gives ~20mm total breathing room. */
+  .pp5-cover {
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 0 8mm;
+  }
+  .pp5-cover-title {
+    font-size: 19px;
+  }
+  .pp5-cover-school {
+    font-size: 16px;
+  }
+  .pp5-cover-affiliation {
+    font-size: 14px;
+  }
+  .pp5-cover-meta td {
+    padding: 0.2rem 0.4rem 0.2rem 0;
+    font-size: 14px;
+  }
+  .pp5-cover-table th,
+  .pp5-cover-table td {
+    padding: 0.18rem 0.28rem;
+    font-size: 12.5px;
+  }
+  .pp5-cover-section {
+    font-size: 15px;
+    margin: 0.55rem 0 0.35rem;
+  }
+  .pp5-cover-approval {
+    /* Extra breathing room above "การอนุมัติผลการเรียน" — table directly
+       above ends with a 1px-thin border so a tight margin made the heading
+       feel cramped against it. */
+    margin-top: 1.5rem;
+  }
+  /* The second approval block ("เสนอเพื่อพิจารณา") follows the 3 signatures
+     of the first block — give it an extra gap so the two approval rows
+     read as visually separate sections rather than a continuous wall of
+     signatures. Adjacent sibling combinator targets only the 2nd one. */
+  .pp5-cover-approval + .pp5-cover-approval {
+    margin-top: 2.5rem;
+  }
+  .pp5-cover-approval-title {
+    font-size: 14px;
+    /* Wider gap between the heading and the signature row below — the
+       default 0.25rem (from screen mode) made the รองผอ signature feel
+       cramped right under "เสนอเพื่อพิจารณา" on paper. Applies to both
+       approval blocks for consistent rhythm. */
+    margin-bottom: 1.5rem;
+  }
+  /* Inside the decision block ("☐ อนุมัติ ☐ ไม่อนุมัติ" + ผอ. signature),
+     widen the gap after the checkbox line so the ลงชื่อ row for ผอ. sits
+     visibly separated — not crammed right under the checkboxes.
+     `.pp5-cover-sig p` has `margin: 0` by default; this rule re-adds
+     spacing only after the first <p> (the checkbox line). */
+  .pp5-cover-sig-decision > p:first-child {
+    /* Bumped to 2.5rem per user spec 2026-05-19 — 1.5rem still felt
+       cramped between the อนุมัติ/ไม่อนุมัติ row and the ผอ. signature
+       row. */
+    margin-bottom: 2.5rem;
+  }
+  .pp5-cover-sig {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* Eval sub-tables shrink a bit more on print to fit alongside score table */
+  .pp5-table-eval {
+    font-size: 10px;
+  }
+  .pp5-table-eval th,
+  .pp5-table-eval td {
+    padding: 0.1rem 0.25rem;
+  }
+
+  /* Simple-print header tweaks per user spec — tighter spacing between
+     title block and meta line. Previously we also used `margin-top: -6mm`
+     to pull the header up, but that pushed across page boundaries on the
+     attendance-by-subject 2nd sub-table (negative margin extends into
+     the previous page's bottom area in Chrome's print engine). Now the
+     tight top is achieved via the @page top margin (8mm) only — no
+     negative margin trickery needed. */
+  .pp5-header {
+    margin-bottom: 0.75rem;
+  }
+  /* Eval print pages have a shorter meta line (just class + ทั้งปี/ภาคเรียน
+     + year — no subject code/name like the score recording) so the header
+     ends up ~5-8mm shorter. Padding-top pushes the eval header down to
+     match the score recording's table-start position visually (user spec
+     2026-05-19: "เพิ่ม padding-top ให้ .pp5-header ของ characteristics"). */
+  .pp5-header--eval {
+    padding-top: 7.5mm;
+  }
+  /* Per-subject attendance print uses a single meta-line header (no
+     affiliation row, no info-grid like the daily report) — same shorter
+     layout as the eval pages. Padding-top pushes the table-start position
+     down to match the daily attendance report visually (user spec
+     2026-05-19: "เพิ่ม padding-top ให้ header ของรายวิชา"). */
+  .pp5-header--att-sub {
+    padding-top: 0;
+  }
+  .pp5-title {
+    margin-bottom: 0.3rem;
+  }
+  .pp5-meta-line {
+    font-size: 11px;
+    margin: 0.25rem 0 0.6rem;
+    gap: 0.3rem 1.25rem;
+  }
+
+  /* Tighter score-table rows in print — default 0.25rem vertical padding
+     made rows feel "airy" once we padded to 30 rows. Drop top/bottom
+     padding so all rows fit comfortably on one A4 page.
+     Height 22px enforces a consistent row height when class > 30 (no
+     "roomy" modifier) — user spec 2026-05-19. */
+  .pp5-table tbody td {
+    padding: 0.05rem 0.4rem;
+    line-height: 1.25;
+    height: 22px;
+  }
+
+  /* Thin borders for print/PDF output.
+     CSS `1px` borders are rendered at the printer's pixel grid — on
+     high-DPI PDF exports (~300 DPI) a 1px CSS line becomes ~3 physical
+     pixels wide, which looks visibly thick compared to the body text.
+     Drop to 0.5pt (= 1/144 inch) for every table border AND for the
+     dotted underline beneath cover meta values so the rules stay crisp
+     without overpowering the content. */
+  .pp5-table,
+  .pp5-table th,
+  .pp5-table td,
+  .pp5-cover-table,
+  .pp5-cover-table th,
+  .pp5-cover-table td,
+  .att-table,
+  .att-table th,
+  .att-table td {
+    border-width: 0.5pt;
+  }
+  /* Right-border clipping fix: with `table-layout: fixed` + cell widths
+     summing to 100%, the table's right border lands exactly on the
+     printable-area edge — Chrome PDF then crops it. Shaving the table
+     width to 99% (user spec 2026-05-19: "ลดขนาดตารางลง") gives a tiny
+     buffer so the right border always stays inside the page. */
+  .pp5-table {
+    width: 99%;
+  }
+  .pp5-cover-meta .pp5-cover-val {
+    /* Intentionally NO underline in print mode (per user spec —
+       "ดูสะอาดดี"). Tried CSS `border-style: dotted` and a radial-gradient
+       background pattern; both rendered inconsistently in Chrome's PDF
+       backend (PDFium turns thin dotted into dashes; small gradients
+       sometimes don't render at all). The cleaner solution is to drop
+       the underline entirely on paper — the label-value pairs already
+       align via the table layout, so the underline isn't load-bearing.
+       Screen preview keeps the dotted underline so the cover still
+       reads as a "fillable form" while admin reviews the data. */
+    border-bottom: none;
+  }
+  .pp5-info-grid {
+    border-top-width: 0.5pt;
+  }
+  /* Keep each section title with at least its first row of table content */
+  .pp5-section-title {
+    font-size: 12px;
+    margin: 1rem 0 0.4rem;
+  }
+  .pp5-legend-small {
+    font-size: 9px;
+  }
+  /* Attendance reports — A4 portrait, symmetric @page margin.
+     Asymmetric @page margins worked in screen preview but Chrome's PDF
+     backend overrode them to its own minimum (~10mm) → printed output
+     looked centered instead of right-shifted. To get consistent
+     positioning between preview and PDF, use symmetric @page margins
+     here and shift the table itself via an explicit margin-left on
+     `.att-table` (see rule below).
+     Margins (user spec 2026-05-19): top 7mm · sides 10mm · bottom 5mm.
+     7mm top is INSIDE Chrome PDF's ~10mm no-print zone — the logo may be
+     partially clipped on tighter school printers. Bump back to 10mm if
+     clipping is unacceptable on the target printer. */
+  @page att-portrait-narrow {
+    size: A4 portrait;
+    margin: 7mm 10mm 5mm; /* top · sides · bottom */
+  }
+  /* Explicit table positioning — overrides the default `margin: 1rem auto`
+     centering. Chrome PDF honors this because it's content positioning,
+     not page-level.
+     User spec 2026-05-19: "ตำแหน่งจากขอบกระดาษ left = 12mm".
+     @page left margin = 10mm + this margin-left 2mm → table left edge
+     sits at 12mm from paper edge. */
+  .pp5-page-content-wide .att-table {
+    margin-left: 2mm;
+    margin-right: 0;
+  }
+  .att-page {
+    padding: 0;
+    max-width: none;
+    font-size: 10px;
+  }
+  /* Tighten the header + footer spacing on print so the table dominates */
+  .att-page .pp5-header {
+    margin-bottom: 0.5rem;
+  }
+  .att-page .pp5-title h1 {
+    font-size: 14px;
+  }
+  .att-page .pp5-school-name {
+    font-size: 12px;
+  }
+  .att-page .pp5-school-affiliation {
+    font-size: 11px;
+  }
+  .att-page .pp5-footer {
+    margin-top: 1rem;
+  }
+  /* Tighter version of the repeated 4-row header on print */
+  .att-page-header {
+    margin-bottom: 0.4rem;
+  }
+  .att-page-header .att-page-title {
+    /* Print override: keep at 15px (matches screen — user spec 2026-05-19). */
+    font-size: 15px;
+  }
+  .att-page-header .att-page-meta {
+    font-size: 15px;
+    margin: 0.2rem 0;
+    gap: 0.3rem 1.5rem;
+  }
+  .att-page-header .att-page-school {
+    font-size: 11px;
+  }
+  .att-page-header .att-page-affiliation {
+    font-size: 10px;
+  }
+  .att-table {
+    font-size: 8.5px;
+    /* Shrink-fit so day columns aren't auto-stretched to fill 100% width. */
+    width: auto;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .att-table th,
+  .att-table td {
+    padding: 0.05rem 0.1rem;
+  }
+  /* Tbody rows get a bit more vertical space so the grid is comfortable to
+     read on print (per user spec — taller rows). Header rows stay tight.
+     Compact (>30 students) = 18px ; roomy (≤30) = 22px.
+     Heights set on BOTH tr AND td so the weekly-grid pages 1+2 render
+     with identical row heights even though page 1 has a name column and
+     page 2 doesn't — `tr { height }` alone was treated as a min-height
+     and the taller name-cell content on page 1 silently pushed its rows
+     ~1-2px taller than page 2's name-less rows (user spec 2026-05-19). */
+  .att-table tbody tr,
+  .att-table tbody td {
+    height: 22px;
+  }
+  .att-table--roomy tbody tr,
+  .att-table--roomy tbody td {
+    height: 24px;
+  }
+  /* Compact (default, >30 students) — minimal padding so tbody tr height
+     of 15px is actually achievable. Name font bumped to 13px to match the
+     score pages (user spec 2026-05-19: "ปรับขึ้นให้เท่าหน้าผลการเรียน"). */
+  .att-table tbody td {
+    padding: 0.05rem 0.15rem;
+  }
+  .att-table tbody .att-name {
+    font-size: 13px;
+  }
+  /* Roomy (≤30 students) — generous padding. Default 14px name font.
+     `.pp5-table--roomy` on score pages still uses 14px. */
+  .att-table--roomy tbody td {
+    padding: 0.2rem 0.15rem;
+  }
+  .att-table--roomy tbody .att-name {
+    font-size: 14px;
+  }
+  /* Standalone attendance reports only (/reports/attendance and
+     /reports/attendance-by-subject — both wrapped in `.att-page`) —
+     shrink the name column and font in roomy mode so day-cells get
+     more horizontal space. Pp5ClassMonthlyAttendance in the ปพ.5
+     bundle keeps the wider 115px / 14px since it doesn't have the
+     `.att-page` wrapper. User spec 2026-05-22. */
+  .att-page .att-table--roomy .att-col-name {
+    width: 95px;
+  }
+  .att-page .att-table--roomy tbody .att-name {
+    font-size: 12px;
+  }
+  /* แบบบันทึกเวลาเรียนรายวิชา ONLY — smaller name font (mirrors the
+     screen-mode rule at the top of the file). Placed AFTER the
+     `.att-page .att-table--roomy` print override above so source order
+     wins for equal-specificity selectors. User spec 2026-05-22. */
+  .att-page-section .att-table tbody .att-name {
+    font-size: 12px;
+  }
+  /* Smaller running-hour number in the slot header (compact print) */
+  .att-table .att-wk-slot {
+    font-size: 6.5px;
+    width: 14px;
+  }
+  /* Tighter fixed-column widths on print to leave more room for day cells */
+  .att-table .att-col-num {
+    width: 18px;
+  }
+  .att-table .att-col-name {
+    width: 115px;
+  }
+  .att-table .att-col-sum {
+    width: 24px;
+  }
+  .att-table .att-col-pct {
+    width: 44px;
+  }
+  /* Extra-compact tier (>35 students) — applied on top of the default
+     compact rules above (no att-table--roomy). Trims row height 22→18px,
+     day-cell font further, and shrinks name font 13→11px so the daily
+     check grid still fits a full month + summary columns on one A4
+     portrait page even for very large classes. Same specificity-via-
+     compound-class trick as `.pp5-table.pp5-table--xcompact`. User
+     spec 2026-05-22. */
+  .att-table.att-table--xcompact tbody tr,
+  .att-table.att-table--xcompact tbody td {
+    height: 18px;
+  }
+  .att-table.att-table--xcompact tbody td {
+    padding: 0 0.1rem;
+    font-size: 9px;
+  }
+  .att-table.att-table--xcompact tbody .att-name {
+    font-size: 11px;
+  }
+  .att-table.att-table--xcompact .att-col-num {
+    width: 16px;
+  }
+  .att-table.att-table--xcompact .att-col-name {
+    width: 100px;
+  }
+  /* Summary report — uses the same portrait-narrow page as monthly,
+     but renders a different (.att-summary-table) layout. Fill the page
+     width (table-layout: fixed scales the explicit col widths
+     proportionally to match). */
+  .att-page .att-summary-table {
+    width: 100%;
+    margin: 0;
+    font-size: 9px;
+  }
+  .att-page .att-summary-table th,
+  .att-page .att-summary-table td {
+    padding: 0.15rem 0.2rem;
+  }
+  .att-page .att-summary-table .att-col-num {
+    width: 18px;
+  }
+  .att-page .att-summary-table .att-col-name {
+    width: 90px;
+  }
+  .att-page .att-summary-table .att-month-head {
+    font-size: 8px;
+  }
+  .att-page .att-summary-table .att-workday-label {
+    font-size: 8px;
+  }
+  /* Per-term summary — fewer months means we can shrink each month col
+     and widen the ร้อยละ col for readability. */
+  .att-summary-term .att-summary-table .att-month-head,
+  .att-summary-term .att-summary-table .att-month-cell {
+    width: 28px;
+  }
+  .att-summary-term .att-summary-table .att-sum-col {
+    width: 30px;
+  }
+  .att-summary-term .att-summary-table .att-pct-col {
+    width: 52px;
+  }
+  /* Each day column tighter + smaller numbers/DOW labels */
+  .att-table .att-day,
+  .att-table .att-day-head {
+    width: 13px;
+    padding: 0.05rem 0;
+    font-size: 7px;
+  }
+  .pp5-table th,
+  .pp5-table td {
+    font-size: 13px;
+    padding: 0.2rem 0.35rem;
+  }
+  /* "Roomy" mode — class size ≤30, table padded to 30 rows.
+     Bumps cell text to 14px and forces 22px row height.
+     Applied by JSX: any table component that pads to 30 rows checks
+     `PADDED_ROW_COUNT === 30` and adds the modifier class.
+     User spec 2026-05-22: numeric score table aligned with passfail
+     (was 26px roomy / default-padding compact). */
+  .pp5-table--roomy th,
+  .pp5-table--roomy td {
+    font-size: 14px;
+  }
+  .pp5-table--roomy tbody td {
+    height: 22px;
+  }
+  /* Compact mode (>30 students) — no `.pp5-table--roomy` class, so
+     text falls back to the base 13px (vs. 14px in roomy) AND we
+     trim vertical padding here so each data row renders ~18–19px
+     instead of the default ~22px from the base 0.2rem padding.
+     Applies to score/passfail tables (they share `.pp5-table`); roomy
+     mode's explicit `height: 22px` still wins when applicable.
+     `:not(.pp5-class-subjects):not(.pp5-class-eval)` keeps the cover
+     page tables (which also use `.pp5-table` for borders/typography
+     but pre-pad rows themselves) from being squished. */
+  .pp5-table:not(.pp5-class-subjects):not(.pp5-class-eval) tbody td {
+    padding-top: 0.05rem;
+    padding-bottom: 0.05rem;
+  }
+  /* Score-recording print (>30 students) — extra-compact rows.
+     Drops cell font to 12px (vs. base 13px), tightens line-height to
+     1.2 (vs. browser default ~1.5), and zeroes vertical padding so
+     35–40 students still fit on one A4 portrait page.
+     Earlier this rule was scoped to `.pp5-page-content-score` which
+     covers bundle mode only — simple-print mode (the /setup/score-
+     structure → "พิมพ์รายงาน" button) renders `NumericTable` /
+     `PassFailTable` WITHOUT that wrapper class, so >30-row tables
+     overflowed to page 2. Broadened the scope to every `.pp5-table`
+     (still excluding cover tables) so both print modes shrink.
+     User spec 2026-05-22. */
+  .pp5-table:not(.pp5-table--roomy):not(.pp5-class-subjects):not(.pp5-class-eval) th,
+  .pp5-table:not(.pp5-table--roomy):not(.pp5-class-subjects):not(.pp5-class-eval) td {
+    font-size: 12px;
+    line-height: 1.15;
+  }
+  .pp5-table:not(.pp5-table--roomy):not(.pp5-class-subjects):not(.pp5-class-eval) tbody td {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  /* Extra-compact tier (>35 students) — extends `compact` by further
+     trimming font (12→11px) and line-height (1.15→1.1). Selector
+     matches `.pp5-table--xcompact` AND inherits the compact padding
+     above via `:not(.pp5-table--roomy)`. Same specificity (4 classes)
+     as compact rules so source order decides — this block sits BELOW
+     compact so it wins. User spec 2026-05-22. */
+  .pp5-table.pp5-table--xcompact:not(.pp5-class-subjects):not(.pp5-class-eval) th,
+  .pp5-table.pp5-table--xcompact:not(.pp5-class-subjects):not(.pp5-class-eval) td {
+    font-size: 11px;
+    line-height: 1.1;
+  }
+  .pp5-footer {
+    /* Tightened from 2rem (user spec 2026-05-19) so the signature row
+       doesn't eat into the table area as much. */
+    margin-top: 1rem;
+  }
+  .pp5-sig-block {
+    /* Slimmer signature row on print — 11px text + 1.4 line-height saves
+       ~12px vertical compared to 12px / 1.75. Together with the bottom
+       @page reduction this gives the table noticeably more room. */
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .pp5-sig-name {
+    font-size: 10px;
+  }
+  /* Avoid orphan headers — keep the table together with its title row */
+  .pp5-table thead {
+    display: table-header-group;
+  }
+  tr,
+  td,
+  th {
+    page-break-inside: avoid;
+  }
+}
