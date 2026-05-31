@@ -6,7 +6,7 @@ import { SchoolForm } from "./school-form";
 import { SchoolLogoUploader } from "./school-logo-uploader";
 
 export const metadata = {
-  title: "ตั้งค่าโรงเรียน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 export default async function SchoolSettingsPage() {

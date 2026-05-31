@@ -25,7 +25,7 @@ import {
 } from "./selector";
 
 export const metadata = {
-  title: "สมรรถนะสำคัญ · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 /** The 5 competency dimensions (fixed per the curriculum). */

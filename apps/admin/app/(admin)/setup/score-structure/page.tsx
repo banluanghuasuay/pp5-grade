@@ -26,7 +26,7 @@ import { SecondaryScoreGrid } from "./secondary-score-grid";
 import { SummarySection } from "./summary-section";
 
 export const metadata = {
-  title: "บันทึกคะแนน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 // Subject category sort order — same as /setup/subjects and /setup/teaching

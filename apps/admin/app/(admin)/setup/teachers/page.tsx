@@ -10,7 +10,7 @@ import { TeachersFilters } from "./teachers-filters";
 import { TeachersSkeleton } from "./teachers-skeleton";
 
 export const metadata = {
-  title: "จัดการครู · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 // Next.js 16: searchParams is async

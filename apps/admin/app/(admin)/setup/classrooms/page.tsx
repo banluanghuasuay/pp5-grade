@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/teacher-scope";
 import { RoomCounter } from "./room-counter";
 
 export const metadata = {
-  title: "ตั้งค่าชั้นเรียน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 // Next.js 16: searchParams is async

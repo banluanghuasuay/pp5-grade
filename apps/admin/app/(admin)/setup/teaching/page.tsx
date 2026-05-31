@@ -17,7 +17,7 @@ const CATEGORY_ORDER: Record<string, number> = {
 };
 
 export const metadata = {
-  title: "จัดครูเข้าสอน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 type Props = {

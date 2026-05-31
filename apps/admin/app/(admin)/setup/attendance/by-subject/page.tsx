@@ -18,7 +18,7 @@ import {
 import { formatWeekRangeLabel, resolveAnchorIso } from "./term-weeks";
 
 export const metadata = {
-  title: "บันทึกเวลาเรียนรายวิชา · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 // Force dynamic + no-store on every visit. Without these, navigating away

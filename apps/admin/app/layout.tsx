@@ -10,10 +10,10 @@ const sarabun = Sarabun({
 });
 
 export const metadata: Metadata = {
-  title: {
-    default: "ระบบ ปพ.5",
-    template: "%s · ระบบ ปพ.5",
-  },
+  // Constant title on every tab — user spec 2026-05-31: "ใช้แบบนี้ทุกหน้า".
+  // No template (which would prefix child titles); pages drop their own
+  // `title` so they inherit this default verbatim.
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
   description: "ระบบบันทึกผลการเรียนตามหลักสูตรแกนกลาง 2551 — หลังบ้าน (admin + ครู)",
 };
 

@@ -12,7 +12,7 @@ import { NavigationGate } from "./navigation-gate";
 import { RenumberClassroomButton } from "./renumber-button";
 
 export const metadata = {
-  title: "จัดการนักเรียน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 type Props = {

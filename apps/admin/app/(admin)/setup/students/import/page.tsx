@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ImportWizard } from "./import-wizard";
 
 export const metadata = {
-  title: "นำเข้านักเรียน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 /**

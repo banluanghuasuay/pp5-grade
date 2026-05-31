@@ -4,7 +4,7 @@ import { abbreviateTitle } from "../../setup/score-structure/grading-utils";
 import { PrintButton } from "../pp5/print-button";
 
 export const metadata = {
-  title: "พิมพ์ผลการประเมิน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 // ===================================================================

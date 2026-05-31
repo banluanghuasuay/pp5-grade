@@ -7,7 +7,7 @@ import { updateHoliday } from "../actions";
 import { HolidayForm } from "../holiday-form";
 
 export const metadata = {
-  title: "แก้ไขวันหยุด · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 type Props = { params: Promise<{ id: string }> };

@@ -9,7 +9,7 @@ import { HolidayForm } from "./holiday-form";
 import { SeedThaiHolidaysButton } from "./seed-button";
 
 export const metadata = {
-  title: "ตั้งค่าวันหยุด · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 const THAI_MONTH_SHORT = [

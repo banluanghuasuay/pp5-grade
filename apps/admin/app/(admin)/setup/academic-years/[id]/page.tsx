@@ -7,7 +7,7 @@ import { updateAcademicYear } from "../actions";
 import { YearForm } from "../year-form";
 
 export const metadata = {
-  title: "แก้ไขปีการศึกษา · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 // Next.js 16: params is async

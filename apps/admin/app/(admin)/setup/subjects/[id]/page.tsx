@@ -11,7 +11,7 @@ import {
 } from "../subject-form";
 
 export const metadata = {
-  title: "แก้ไขวิชา · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 type Props = {

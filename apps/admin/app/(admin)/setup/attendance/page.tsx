@@ -24,7 +24,7 @@ import {
 import { AttendanceSelector } from "./selector";
 
 export const metadata = {
-  title: "บันทึกเวลาเรียน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 type TabValue = "1" | "2" | "summary";

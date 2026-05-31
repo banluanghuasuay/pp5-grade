@@ -26,7 +26,7 @@ import {
 } from "./settings-tab";
 
 export const metadata = {
-  title: "คุณลักษณะอันพึงประสงค์ · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 type Tab = "settings" | "evaluate";

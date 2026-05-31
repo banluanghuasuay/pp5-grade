@@ -13,7 +13,7 @@ import { PrintButton } from "../pp5/print-button";
 import { AutoPrint } from "./auto-print";
 
 export const metadata = {
-  title: "พิมพ์สรุปผลการเรียน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 // ===================================================================

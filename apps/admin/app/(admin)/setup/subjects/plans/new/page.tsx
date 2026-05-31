@@ -7,7 +7,7 @@ import { createPlan } from "../../actions";
 import { PlanForm } from "../../plan-form";
 
 export const metadata = {
-  title: "เพิ่มแผนการเรียน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 type Props = { searchParams: Promise<{ grade?: string }> };

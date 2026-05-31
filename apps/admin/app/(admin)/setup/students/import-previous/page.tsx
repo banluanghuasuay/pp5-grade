@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ImportPreviousWizard } from "./wizard";
 
 export const metadata = {
-  title: "นำเข้านักเรียนจากภาคเรียน/ปีที่แล้ว · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 type Props = {

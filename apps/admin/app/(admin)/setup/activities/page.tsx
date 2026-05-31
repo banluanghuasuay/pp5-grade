@@ -15,7 +15,7 @@ import {
 import { ScoreSelector, type SubjectOption } from "../score-structure/score-selector";
 
 export const metadata = {
-  title: "กิจกรรมพัฒนาผู้เรียน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 // ===================================================================

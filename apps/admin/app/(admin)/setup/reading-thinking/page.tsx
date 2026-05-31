@@ -25,7 +25,7 @@ import {
 } from "./selector";
 
 export const metadata = {
-  title: "การอ่าน คิดวิเคราะห์ และเขียน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 /** The 3 dimensions of การอ่าน คิดวิเคราะห์ และเขียน (fixed per the curriculum). */

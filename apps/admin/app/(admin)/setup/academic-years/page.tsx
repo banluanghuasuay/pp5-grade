@@ -9,7 +9,7 @@ import { DeleteForm } from "./delete-form";
 import { SetCurrentButton } from "./set-current-button";
 
 export const metadata = {
-  title: "ตั้งค่าปีการศึกษา · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 /** Format YYYY-MM-DD → DD/MM/YYYY (Buddhist year display = same calendar year here). */

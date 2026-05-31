@@ -12,7 +12,7 @@ import { Pp5SelectorForm } from "./pp5-selector-form";
 import { getTeacherScope } from "@/lib/teacher-scope";
 
 export const metadata = {
-  title: "ปพ.5 · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 type Props = {

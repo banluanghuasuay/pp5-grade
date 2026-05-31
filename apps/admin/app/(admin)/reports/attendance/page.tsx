@@ -13,7 +13,7 @@ import { AttendanceSummarySection } from "../../setup/attendance/summary-section
 import { PrintButton } from "../pp5/print-button";
 
 export const metadata = {
-  title: "พิมพ์รายงานเวลาเรียน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 type Props = {

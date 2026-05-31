@@ -8,7 +8,7 @@ import { ResetPasswordForm } from "../reset-password-form";
 import { TeacherForm } from "../teacher-form";
 
 export const metadata = {
-  title: "แก้ไขครู · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 // Next.js 16: params is async

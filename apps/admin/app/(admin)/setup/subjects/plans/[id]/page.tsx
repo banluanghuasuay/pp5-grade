@@ -7,7 +7,7 @@ import { updatePlan } from "../../actions";
 import { PlanForm } from "../../plan-form";
 
 export const metadata = {
-  title: "แก้ไขแผนการเรียน · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 type Props = { params: Promise<{ id: string }> };

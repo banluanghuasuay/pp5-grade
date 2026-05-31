@@ -10,7 +10,7 @@ import {
 } from "../subject-form";
 
 export const metadata = {
-  title: "เพิ่มวิชา · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 type Props = {

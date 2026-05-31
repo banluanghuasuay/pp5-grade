@@ -5,7 +5,7 @@ import { createAcademicYear } from "../actions";
 import { YearForm } from "../year-form";
 
 export const metadata = {
-  title: "เพิ่มปีการศึกษา · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 export default function NewAcademicYearPage() {

@@ -6,7 +6,7 @@ import { createTeacher } from "../actions";
 import { TeacherForm } from "../teacher-form";
 
 export const metadata = {
-  title: "เพิ่มครู · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 export default async function NewTeacherPage() {

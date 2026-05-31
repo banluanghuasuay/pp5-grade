@@ -16,7 +16,7 @@ import { NavigationGate } from "./navigation-gate";
 import { SubjectsSkeleton } from "./subjects-skeleton";
 
 export const metadata = {
-  title: "จัดการวิชา · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 const CATEGORY_LABEL: Record<string, string> = {

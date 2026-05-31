@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/teacher-scope";
 import { HomeroomRow } from "./homeroom-row";
 
 export const metadata = {
-  title: "ครูประจำชั้น · ระบบ ปพ.5",
+  title: "ระบบบันทึกผลการเรียนออนไลน์",
 };
 
 /**
