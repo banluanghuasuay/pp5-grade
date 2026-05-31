@@ -2,10 +2,21 @@ import { createClient } from "@pp5/database/server";
 import Link from "next/link";
 import { abbreviateTitle } from "../../setup/score-structure/grading-utils";
 import { PrintButton } from "../pp5/print-button";
+import type { Metadata } from "next";
+import { currentTermSuffix } from "@/lib/current-term";
 
-export const metadata = {
-  title: "ระบบบันทึกผลการเรียนออนไลน์",
-};
+export async function generateMetadata({
+  searchParams,
+}: Props): Promise<Metadata> {
+  const p = await searchParams;
+  if (p.embed !== "1") return {};
+  const type = (p.type ?? "") as EvalType;
+  const name = VALID_TYPES.includes(type)
+    ? TYPE_TITLE[type]
+    : "สรุปผลการประเมิน";
+  const suffix = await currentTermSuffix();
+  return { title: `${name} ${suffix}`.trim() };
+}
 
 // ===================================================================
 // Student-eval print report (3 types):

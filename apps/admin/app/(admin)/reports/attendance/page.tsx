@@ -11,10 +11,15 @@ import {
 import { abbreviateTitle } from "../../setup/score-structure/grading-utils";
 import { AttendanceSummarySection } from "../../setup/attendance/summary-section";
 import { PrintButton } from "../pp5/print-button";
+import type { Metadata } from "next";
+import { currentTermSuffix } from "@/lib/current-term";
 
-export const metadata = {
-  title: "ระบบบันทึกผลการเรียนออนไลน์",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  // Print-only route (no selector view) → always name it for the saved
+  // PDF. User spec 2026-05-31.
+  const suffix = await currentTermSuffix();
+  return { title: `รายงานเวลาเรียน ${suffix}`.trim() };
+}
 
 type Props = {
   searchParams: Promise<{

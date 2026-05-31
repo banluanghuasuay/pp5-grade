@@ -2,11 +2,18 @@ import { createClient } from "@pp5/database/server";
 import Link from "next/link";
 import { resolveAnchorIso } from "../../setup/attendance/by-subject/term-weeks";
 import { abbreviateTitle } from "../../setup/score-structure/grading-utils";
+import type { Metadata } from "next";
+import { currentTermSuffix } from "@/lib/current-term";
 import { PrintButton } from "../pp5/print-button";
 
-export const metadata = {
-  title: "ระบบบันทึกผลการเรียนออนไลน์",
-};
+export async function generateMetadata({
+  searchParams,
+}: Props): Promise<Metadata> {
+  const p = await searchParams;
+  if (p.embed !== "1") return {};
+  const suffix = await currentTermSuffix();
+  return { title: `รายงานเวลาเรียนรายวิชา ${suffix}`.trim() };
+}
 
 type Props = {
   searchParams: Promise<{

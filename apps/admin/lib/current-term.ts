@@ -35,6 +35,18 @@ export async function getCurrentTerm(): Promise<CurrentTerm | null> {
 }
 
 /**
+ * Human-readable "ภาคเรียนที่ X ปีการศึกษา YYYY" for the current term.
+ * Used to name downloaded report PDFs — the print iframe's document.title
+ * becomes the browser's Save-as-PDF filename, so each report sets its
+ * title to "<ชื่องาน> <suffix>". Empty string when no current year.
+ * User spec 2026-05-31.
+ */
+export async function currentTermSuffix(): Promise<string> {
+  const t = await getCurrentTerm();
+  return t ? `ภาคเรียนที่ ${t.semester} ปีการศึกษา ${t.yearBe}` : "";
+}
+
+/**
  * Compare a target semester against the current term to determine
  * lock state. Useful in both UI (decide disabled/readonly) and
  * server actions (guard writes).

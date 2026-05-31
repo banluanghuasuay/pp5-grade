@@ -11,10 +11,17 @@ import {
 import { ensureCategorySlots } from "../../setup/score-structure/actions";
 import { PrintButton } from "../pp5/print-button";
 import { AutoPrint } from "./auto-print";
+import type { Metadata } from "next";
+import { currentTermSuffix } from "@/lib/current-term";
 
-export const metadata = {
-  title: "ระบบบันทึกผลการเรียนออนไลน์",
-};
+export async function generateMetadata({
+  searchParams,
+}: Props): Promise<Metadata> {
+  const p = await searchParams;
+  if (p.embed !== "1") return {};
+  const suffix = await currentTermSuffix();
+  return { title: `สรุปผลการเรียน ${suffix}`.trim() };
+}
 
 // ===================================================================
 // Grade summary print report

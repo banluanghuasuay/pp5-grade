@@ -9,11 +9,18 @@ import {
 } from "../../setup/score-structure/grading-utils";
 import { PrintButton } from "./print-button";
 import { Pp5SelectorForm } from "./pp5-selector-form";
+import type { Metadata } from "next";
+import { currentTermSuffix } from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
 
-export const metadata = {
-  title: "ระบบบันทึกผลการเรียนออนไลน์",
-};
+export async function generateMetadata({
+  searchParams,
+}: Props): Promise<Metadata> {
+  const p = await searchParams;
+  if (p.embed !== "1") return {};
+  const suffix = await currentTermSuffix();
+  return { title: `ปพ.5 รายวิชา ${suffix}`.trim() };
+}
 
 type Props = {
   searchParams: Promise<{
