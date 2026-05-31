@@ -141,44 +141,45 @@ export default async function CharacteristicsPage({ searchParams }: Props) {
     );
   }
 
-  // 3. Resolve grade + room
-  const selectedGrade =
-    sortedGrades.find((g) => g.id === params.grade) ?? sortedGrades[0];
-  const roomsInGrade = (classrooms ?? [])
-    .filter((c) => c.grade_level_id === selectedGrade.id)
-    .sort((a, b) => a.room_number - b.room_number);
-  const selectedClassroom =
-    roomsInGrade.find((r) => r.id === params.room) ?? roomsInGrade[0];
+  // 3. Resolve grade + room — single-room auto-picks, multi-room stays null
+  //    until chosen. The ประเมิน (evaluate) tab needs a room; ตั้งค่า
+  //    (settings) is global and shows regardless. User spec 2026-05-31.
+  const selectedGrade = params.grade
+    ? (sortedGrades.find((g) => g.id === params.grade) ?? null)
+    : null;
+  const roomsInGrade = selectedGrade
+    ? (classrooms ?? [])
+        .filter((c) => c.grade_level_id === selectedGrade.id)
+        .sort((a, b) => a.room_number - b.room_number)
+    : [];
+  const selectedClassroom = params.room
+    ? (roomsInGrade.find((r) => r.id === params.room) ?? null)
+    : roomsInGrade.length === 1
+      ? roomsInGrade[0]
+      : null;
 
-  // 4. Homeroom teachers for the subheader. Per user spec the 2 homeroom
-  //    slots are EQUAL STATUS (not primary/secondary hierarchy) — fetch
-  //    both rows + show both names joined with " · ". Order by `role`
-  //    just to keep "slot 1" listed first when both are filled.
-  const { data: homerooms } = await supabase
-    .from("homeroom_assignments")
-    .select(
-      `
-      role,
-      teacher:teachers!teacher_id (
-        user:users!user_id (full_name, title)
+  // 4. Homeroom + room label — only once a room is resolved.
+  let homeroomLabel: string | null = null;
+  let roomShortLabel = "";
+  if (selectedGrade && selectedClassroom) {
+    const { data: homerooms } = await supabase
+      .from("homeroom_assignments")
+      .select(
+        `role, teacher:teachers!teacher_id ( user:users!user_id (full_name, title) )`,
       )
-    `,
-    )
-    .eq("classroom_id", selectedClassroom.id)
-    .order("role");
-  const homeroomNames = (homerooms ?? [])
-    .filter((h) => h.teacher?.user)
-    .map(
-      (h) =>
-        `${h.teacher!.user!.title ?? ""}${h.teacher!.user!.full_name}`,
-    );
-  const homeroomLabel =
-    homeroomNames.length > 0 ? homeroomNames.join(" · ") : null;
-
-  const roomShortLabel =
-    roomsInGrade.length > 1
-      ? `${selectedGrade.name_short}/${selectedClassroom.room_number}`
-      : selectedGrade.name_short;
+      .eq("classroom_id", selectedClassroom.id)
+      .order("role");
+    const homeroomNames = (homerooms ?? [])
+      .filter((h) => h.teacher?.user)
+      .map(
+        (h) => `${h.teacher!.user!.title ?? ""}${h.teacher!.user!.full_name}`,
+      );
+    homeroomLabel = homeroomNames.length > 0 ? homeroomNames.join(" · ") : null;
+    roomShortLabel =
+      roomsInGrade.length > 1
+        ? `${selectedGrade.name_short}/${selectedClassroom.room_number}`
+        : selectedGrade.name_short;
+  }
 
   // 5. Active characteristics (global, doesn't depend on classroom)
   const { data: charactersRaw } = await supabase
@@ -197,10 +198,12 @@ export default async function CharacteristicsPage({ searchParams }: Props) {
     id: g.id,
     label: g.name_short,
   }));
-  const rooms: RoomOption[] = roomsInGrade.map((r) => ({
-    id: r.id,
-    label: `${selectedGrade.name_short}/${r.room_number}`,
-  }));
+  const rooms: RoomOption[] = selectedGrade
+    ? roomsInGrade.map((r) => ({
+        id: r.id,
+        label: `${selectedGrade.name_short}/${r.room_number}`,
+      }))
+    : [];
 
   return (
     <>
@@ -209,22 +212,26 @@ export default async function CharacteristicsPage({ searchParams }: Props) {
         iconBg="bg-rose-100 text-rose-700"
         title="ประเมินตามหลักสูตร · คุณลักษณะอันพึงประสงค์"
         description={
-          <>
-            ห้อง <strong>{roomShortLabel}</strong>
-            {term ? (
-              <>
-                {" "}· ภาคเรียนที่{" "}
-                <strong>
-                  {term.semester}/{currentYear.year_be}
-                </strong>
-              </>
-            ) : null}
-            {homeroomLabel ? (
-              <>
-                {" "}· ครูประจำชั้น <strong>{homeroomLabel}</strong>
-              </>
-            ) : null}
-          </>
+          selectedClassroom ? (
+            <>
+              ห้อง <strong>{roomShortLabel}</strong>
+              {term ? (
+                <>
+                  {" "}· ภาคเรียนที่{" "}
+                  <strong>
+                    {term.semester}/{currentYear.year_be}
+                  </strong>
+                </>
+              ) : null}
+              {homeroomLabel ? (
+                <>
+                  {" "}· ครูประจำชั้น <strong>{homeroomLabel}</strong>
+                </>
+              ) : null}
+            </>
+          ) : (
+            "เลือกระดับชั้นและห้องเพื่อประเมิน · หรือตั้งค่าหัวข้อในแท็บ “ตั้งค่า”"
+          )
         }
       />
 
@@ -233,17 +240,17 @@ export default async function CharacteristicsPage({ searchParams }: Props) {
         <Card padding="sm" className="mb-4">
           <CharacteristicsSelector
             grades={grades}
-            selectedGradeId={selectedGrade.id}
+            selectedGradeId={selectedGrade?.id ?? ""}
             rooms={rooms}
-            selectedRoomId={selectedClassroom.id}
+            selectedRoomId={selectedClassroom?.id ?? ""}
             tab={tab}
           />
         </Card>
 
         {/* Tab nav (2 tabs) */}
         <TabNav
-          gradeId={selectedGrade.id}
-          roomId={selectedClassroom.id}
+          gradeId={selectedGrade?.id ?? ""}
+          roomId={selectedClassroom?.id ?? ""}
           currentTab={tab}
           characteristicCount={characteristics.length}
         />
@@ -261,6 +268,14 @@ export default async function CharacteristicsPage({ searchParams }: Props) {
         >
           {tab === "settings" ? (
             <CharacteristicsSettings items={characteristics} />
+          ) : !selectedGrade ? (
+            <Card variant="dashed" className="p-12 text-center">
+              <p className="text-sm text-zinc-500">เลือกระดับชั้นก่อน</p>
+            </Card>
+          ) : !selectedClassroom ? (
+            <Card variant="dashed" className="p-12 text-center">
+              <p className="text-sm text-zinc-500">เลือกห้องเรียนก่อน</p>
+            </Card>
           ) : (
             <Suspense
               key={`${selectedClassroom.id}-${term?.semester ?? 1}`}
