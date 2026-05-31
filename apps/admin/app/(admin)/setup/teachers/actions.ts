@@ -263,46 +263,6 @@ export async function resetTeacherPassword(
 }
 
 /**
- * Toggle a teacher's `is_active` flag (soft delete / reactivate).
- *
- * Hard delete is intentionally NOT supported: teacher_id is referenced from
- * many tables (subject_offerings, scores, attendance, evaluations) — losing
- * a teacher would break history. Soft delete preserves data while blocking login.
- *
- * Note: this updates `users.is_active`, NOT `teachers` (no such column there).
- * The setActive value is passed explicitly (not computed from `!current`) to
- * avoid a race condition if admin clicks twice quickly.
- */
-export async function toggleTeacherActive(formData: FormData) {
-  const guard = await ensureAdmin();
-  if (guard) throw new Error(guard.error ?? "ไม่มีสิทธิ์");
-
-  const id = String(formData.get("id") ?? "").trim();
-  if (!id) throw new Error("missing id");
-
-  // Explicit "set to" value avoids toggle race conditions
-  const setActive = formData.get("set_active") === "true";
-
-  const admin = createAdminClient();
-
-  const { data: teacher, error: findError } = await admin
-    .from("teachers")
-    .select("user_id")
-    .eq("id", id)
-    .maybeSingle();
-  if (findError) throw new Error(findError.message);
-  if (!teacher) throw new Error("ไม่พบครู");
-
-  const { error: updateError } = await admin
-    .from("users")
-    .update({ is_active: setActive })
-    .eq("id", teacher.user_id);
-  if (updateError) throw new Error(updateError.message);
-
-  revalidatePath("/setup/teachers");
-}
-
-/**
  * Hard-delete a teacher. Carefully — many tables reference teacher_id.
  *
  * Pre-check: blocks if the teacher has any `subject_offerings` rows
@@ -318,7 +278,7 @@ export async function toggleTeacherActive(formData: FormData) {
  *   3. delete from auth.users (Supabase admin API — separate schema)
  *
  * Use this only for newly-added teachers who haven't recorded anything
- * yet. For long-tenured teachers use `toggleTeacherActive`.
+ * yet. For long-tenured teachers, prefer ปิดใช้งาน in the edit form.
  *
  * User spec 2026-05-22.
  */

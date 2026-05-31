@@ -52,7 +52,8 @@ export function DeleteTeacherForm({
   const handlePreSubmit = async (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     // Capture form ref BEFORE await — React 19 nulls `currentTarget`
-    // after the await resolves (same gotcha as ToggleActiveForm).
+    // after the await resolves (same gotcha as other SweetAlert
+    // pre-submit forms).
     const form = e.currentTarget.form;
 
     const result = await Swal.fire({
