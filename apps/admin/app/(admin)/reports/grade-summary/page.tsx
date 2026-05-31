@@ -14,11 +14,10 @@ import { AutoPrint } from "./auto-print";
 import type { Metadata } from "next";
 import { currentTermSuffix } from "@/lib/current-term";
 
-export async function generateMetadata({
-  searchParams,
-}: Props): Promise<Metadata> {
-  const p = await searchParams;
-  if (p.embed !== "1") return {};
+export async function generateMetadata(): Promise<Metadata> {
+  // The summary-tab "พิมพ์รายงาน" button opens this WITHOUT embed=1, so —
+  // like the attendance report — always name it for the saved PDF rather
+  // than gating on embed (which would leave it as the constant title).
   const suffix = await currentTermSuffix();
   return { title: `สรุปผลการเรียน ${suffix}`.trim() };
 }
