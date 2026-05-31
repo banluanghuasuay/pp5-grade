@@ -3815,5 +3815,65 @@ Schema update:
 - **ครั้งหน้ามาต่อ**: ตอบ 6 ข้อ pending → เริ่ม Phase 1 (Dump schema + extract subject template)
 - **Working tree**: clean หลัง append doc นี้ + commit ใหม่
 
+---
+
+## Session 2026-05-31 — Loading UX, teacher filters, titles/filenames, select-first flow
+
+> เซสชันยาวมาก · งาน UX/polish หลายเรื่อง · commit เป็นชุดๆ
+
+### 1. Loading UX overhaul (commit `9eff9d8`)
+**ปัญหา**: กดเมนูข้าง/เปลี่ยนชั้น → เนื้อหาเก่าค้าง (Next 16 client nav ค้าง content ใน shared-layout Suspense)
+- **NavigationOverlay** (กดเมนูข้ามหน้า): `useLinkStatus` ใน sidebar → bump context → overlay skeleton ทันที · ครอบด้วย `usePathname` change → ซ่อน
+- **FilterNavProvider/Gate/Link** (เปลี่ยน dropdown/tab ในหน้า): `startNav()` imperative ตอน onChange/onClick → `pending` (derived จาก searchParams snapshot) → skeleton 0ms
+  - **เปลี่ยนจาก useSearchParams-gate เดิมที่ไม่เคยทำงาน** (URL อัปเดตตอน commit ใน transition → ไม่มีช่วง mismatch)
+- ครอบ 10 หน้า: subjects/teaching/students/attendance(×2)/score-structure/characteristics/reading-thinking/competency/activities
+- `FilterNavLink` = `<Link>` + startNav (สำหรับ tab/เดือน/สัปดาห์)
+
+### 2. หน้าครู (commit `9eff9d8` + `1e22d03`)
+- 3 filters: ตำแหน่ง / กลุ่มสาระ / สถานะ(default ใช้งาน) · จอเล็กบรรทัดเดียว สัดส่วน flex (กลุ่มสาระกว้างสุด)
+- ย้าย toggle ปิดใช้งาน → ฟอร์มแก้ไข (`showStatus` + updateTeacher รับ is_active)
+- mobile `table-fixed` (ไม่เลื่อน + ชื่อ truncate)
+- ลบ dead code (`toggle-active-form.tsx` + action `toggleTeacherActive`)
+
+### 3. บันทึกเวลาเรียน
+- เมนู "รายวัน(โฮมรูม)" · "เทอม X"→"ภาคเรียนที่ X" ทุกจุด
+- รายวิชา grid: คอลัมน์ "รวม" เลิก sticky (เลื่อนกับตาราง) · legend ย้ายนอก scroll (ล็อก)
+
+### 4. นักเรียน/ปพ.5 รวมชั้น
+- นักเรียน mobile `table-fixed`
+- ปพ.5 รวมชั้น: เลือกชั้นก่อนค่อยแสดง preview (`gradeId=""` + placeholder)
+
+### 5. Overlay z-index fix (`9eff9d8`)
+- attendance sticky columns (`zIndex:30` inline + `z-20`) ทะลุ NavigationOverlay (z-10)
+- แก้: overlay `z-40` + `isolate` (stacking context) · audit max sticky z = 30
+
+### 6. Title bar คงที่ทุกหน้า (commit `3bb4bad`)
+- root layout `title: "ระบบบันทึกผลการเรียนออนไลน์"` (ค่าคงที่ ไม่มี template)
+- 35 page ลบ suffix "· ระบบ ปพ.5" → constant (batch ด้วย PowerShell + .NET UTF8 no-BOM — Thai-safe)
+
+### 7. ชื่อไฟล์ PDF รายงาน (commit `5441f6a` + `b592a9b`)
+- print iframe `document.title` = ชื่อไฟล์ Save-as-PDF → constant ทุกตัว (จากข้อ 6)
+- `generateMetadata` ใน 6 reports: embed → "`<ชื่องาน> ภาคเรียนที่ X ปีการศึกษา Y`" · non-embed → `{}` (inherit constant)
+- helper `currentTermSuffix()` ใน `lib/current-term.ts`
+- **bug grade-summary**: print URL ไม่มี `embed=1` → แก้เป็น always-dynamic (เหมือน attendance)
+
+### 8. Select-first flow — เลือกชั้น/ห้อง/วิชาก่อนค่อยแสดง (4/7 หน้า · commit `a2aaf84`,`d4fa4d0`,`c36a8a5`)
+**User spec (revised)**: เข้ามาว่างหมด · เลือกชั้นเอง · **ห้องเดียว auto · หลายห้องโผล่ dropdown รอ** · วิชาเดียว auto/หลายวิชา dropdown
+- Pattern: `selectedClassroom = params.room ? find : roomsInGrade.length===1 ? [0] : null` · selector grade placeholder "— เลือกชั้น —" + room `rooms.length>1` + placeholder · body empty state "เลือก..."
+- **เสร็จ 4/7**: reading-thinking, competency, attendance(รายวัน, guard-early), characteristics(tab settings=global แสดงได้ · evaluate=ต้องห้อง)
+- **🔜 เหลือ 3 (มีชั้นเลือกวิชา)**: `attendance/by-subject`, `score-structure`, `activities`
+  - pattern: + `selectedSubject = params.subject ? find : sortedSubjects.length===1 ? [0] : null` · selector subject dropdown `subjects.length>1` · body guard ชั้น→ห้อง→วิชา
+  - by-subject ซับซ้อน: guard-early ก่อน `isPrimary`/subject-fetch (ใช้ selectedGrade/Classroom) + offering auto-create
+  - score-structure/activities ใช้ `ScoreSelector` ร่วมกัน (subject + tab) — แก้ selector ครั้งเดียว
+
+### 💬 ถาม-ตอบ: Sonnet ไหวไหม?
+- งาน ~80% เป็น pattern-based (template→apply) → Sonnet ไหวสบาย
+- ~20% (debug ลึก Next 16 quirks / z-index / transition timing / architecture) → Opus เด่นกว่า
+- แนะนำ: Sonnet เป็นหลัก + Opus ตอนติด · กุญแจ = ทีละ step + type-check ทุกครั้ง
+
+### 🛑 หยุดพัก
+- **ครั้งหน้า**: ทำต่อ 3 หน้าวิชา (by-subject/score-structure/activities) ด้วย pattern ข้อ 8
+- commit ล่าสุด: `c36a8a5` · pushed
+
 
 
