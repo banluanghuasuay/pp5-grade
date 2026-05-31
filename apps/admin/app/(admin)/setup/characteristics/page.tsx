@@ -6,6 +6,9 @@ import { Suspense } from "react";
 import { getCurrentTerm, semesterStateOf } from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
 import { DirectPrintButton } from "../../_components/direct-print-button";
+import { FilterNavProvider } from "../_components/filter-nav-context";
+import { FilterNavGate } from "../_components/filter-nav-gate";
+import { FilterNavLink } from "../_components/filter-nav-link";
 import { abbreviateTitle } from "../score-structure/grading-utils";
 import {
   CharacteristicEvalGrid,
@@ -225,31 +228,29 @@ export default async function CharacteristicsPage({ searchParams }: Props) {
         }
       />
 
-      {/* Selector */}
-      <Card padding="sm" className="mb-4">
-        <CharacteristicsSelector
-          grades={grades}
-          selectedGradeId={selectedGrade.id}
-          rooms={rooms}
-          selectedRoomId={selectedClassroom.id}
-          tab={tab}
+      <FilterNavProvider>
+        {/* Selector */}
+        <Card padding="sm" className="mb-4">
+          <CharacteristicsSelector
+            grades={grades}
+            selectedGradeId={selectedGrade.id}
+            rooms={rooms}
+            selectedRoomId={selectedClassroom.id}
+            tab={tab}
+          />
+        </Card>
+
+        {/* Tab nav (2 tabs) */}
+        <TabNav
+          gradeId={selectedGrade.id}
+          roomId={selectedClassroom.id}
+          currentTab={tab}
+          characteristicCount={characteristics.length}
         />
-      </Card>
 
-      {/* Tab nav (2 tabs) */}
-      <TabNav
-        gradeId={selectedGrade.id}
-        roomId={selectedClassroom.id}
-        currentTab={tab}
-        characteristicCount={characteristics.length}
-      />
-
-      {/* Body */}
-      {tab === "settings" ? (
-        <CharacteristicsSettings items={characteristics} />
-      ) : (
-        <Suspense
-          key={`${selectedClassroom.id}-${term?.semester ?? 1}`}
+        {/* Body — gate it so changing ชั้น/ห้อง/แท็บ paints the loading
+            state instantly (settings tab resolves fast; evaluate streams). */}
+        <FilterNavGate
           fallback={
             <Card padding={false} className="overflow-hidden">
               <div className="flex items-center justify-center gap-3 p-16 text-zinc-400">
@@ -258,13 +259,28 @@ export default async function CharacteristicsPage({ searchParams }: Props) {
             </Card>
           }
         >
-          <EvalSection
-            classroomId={selectedClassroom.id}
-            yearId={currentYear.id}
-            characteristics={characteristics}
-          />
-        </Suspense>
-      )}
+          {tab === "settings" ? (
+            <CharacteristicsSettings items={characteristics} />
+          ) : (
+            <Suspense
+              key={`${selectedClassroom.id}-${term?.semester ?? 1}`}
+              fallback={
+                <Card padding={false} className="overflow-hidden">
+                  <div className="flex items-center justify-center gap-3 p-16 text-zinc-400">
+                    <span className="text-sm">กำลังโหลดข้อมูล…</span>
+                  </div>
+                </Card>
+              }
+            >
+              <EvalSection
+                classroomId={selectedClassroom.id}
+                yearId={currentYear.id}
+                characteristics={characteristics}
+              />
+            </Suspense>
+          )}
+        </FilterNavGate>
+      </FilterNavProvider>
     </>
   );
 }
@@ -448,7 +464,7 @@ function TabNav({
         if (roomId) params.set("room", roomId);
         params.set("tab", t.id);
         return (
-          <Link
+          <FilterNavLink
             key={t.id}
             href={`/setup/characteristics?${params.toString()}`}
             aria-current={isActive ? "page" : undefined}
@@ -470,7 +486,7 @@ function TabNav({
                 {t.badge}
               </span>
             ) : null}
-          </Link>
+          </FilterNavLink>
         );
       })}
     </div>

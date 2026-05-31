@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { getCurrentTerm, semesterStateOf } from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
+import { FilterNavProvider } from "../_components/filter-nav-context";
+import { FilterNavGate } from "../_components/filter-nav-gate";
 import {
   PassFailGridSection,
   TabNav,
@@ -327,6 +329,7 @@ export default async function ActivitiesPage({ searchParams }: Props) {
         }
       />
 
+      <FilterNavProvider>
       <Card padding="sm" className="mb-4">
         <ScoreSelector
           grades={sortedGrades.map((g) => ({
@@ -358,6 +361,16 @@ export default async function ActivitiesPage({ searchParams }: Props) {
         />
       )}
 
+      <FilterNavGate
+        fallback={
+          <Card padding={false} className="overflow-hidden">
+            <div className="flex items-center justify-center gap-3 p-16 text-zinc-400">
+              <Loader2 className="size-6 animate-spin" />
+              <span className="text-sm">กำลังโหลดข้อมูล…</span>
+            </div>
+          </Card>
+        }
+      >
       {!selectedSubject ? (
         <Card variant="dashed" className="p-12 text-center">
           <p className="text-sm text-zinc-500">
@@ -411,6 +424,8 @@ export default async function ActivitiesPage({ searchParams }: Props) {
           />
         </Suspense>
       )}
+      </FilterNavGate>
+      </FilterNavProvider>
     </>
   );
 }

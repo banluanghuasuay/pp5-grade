@@ -27,6 +27,10 @@ type DefaultValues = {
   position?: string | null;
   department?: string | null;
   is_department_head?: boolean | null;
+  /** Account active flag — only shown/edited in the edit form (create
+   *  always starts active). User spec 2026-05-31: "การตั้งค่าปิดใช้งาน
+   *  ให้ไปอยู่ในหน้าต่างการแก้ไข". */
+  is_active?: boolean | null;
 };
 
 type Props = {
@@ -39,6 +43,9 @@ type Props = {
   submitLabel?: string;
   /** Options for the กลุ่มสาระ dropdown (sourced from `learning_areas` table). */
   departments: string[];
+  /** Show the "เปิด/ปิดใช้งานบัญชี" toggle — true for edit only. Replaces
+   *  the old inline toggle button on the teacher list. */
+  showStatus?: boolean;
 };
 
 function SubmitButton({ label }: { label: string }) {
@@ -67,6 +74,7 @@ export function TeacherForm({
   lockUsername = false,
   submitLabel = "บันทึก",
   departments,
+  showStatus = false,
 }: Props) {
   const [state, formAction] = useActionState(action, initialState);
 
@@ -242,6 +250,30 @@ export function TeacherForm({
           <span className="font-medium text-zinc-900">หัวหน้ากลุ่มสาระ</span>
         </label>
       </fieldset>
+
+      {/* Account status — edit only. Moved here from the inline toggle on
+          the teacher list (user spec 2026-05-31). */}
+      {showStatus && (
+        <fieldset className="space-y-4">
+          <legend className="text-sm font-semibold text-zinc-900">
+            สถานะบัญชี
+          </legend>
+          <label className="flex items-start gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm">
+            <input
+              type="checkbox"
+              name="is_active"
+              defaultChecked={defaultValues?.is_active ?? true}
+              className="mt-0.5 rounded border-zinc-300"
+            />
+            <span>
+              <span className="font-medium text-zinc-900">เปิดใช้งานบัญชี</span>
+              <span className="ml-2 text-xs font-normal text-zinc-600">
+                ติ๊กออก = ปิดใช้งาน · ครูจะเข้าระบบไม่ได้ · ข้อมูลในประวัติยังอยู่
+              </span>
+            </span>
+          </label>
+        </fieldset>
+      )}
 
       {state.error && !state.fieldErrors && (
         <div

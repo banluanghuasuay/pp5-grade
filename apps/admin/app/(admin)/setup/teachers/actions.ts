@@ -31,6 +31,8 @@ type ParsedTeacher = {
    *  log in to the admin app. The `teachers` row still exists so the
    *  person also shows up in the teacher list / homeroom dropdowns. */
   is_admin: boolean;
+  /** users.is_active — edit form only (create always true). */
+  is_active: boolean;
   // teachers
   position: string | null;
   department: string | null;
@@ -50,6 +52,9 @@ function parseForm(formData: FormData, requirePassword: boolean):
   const department = String(formData.get("department") ?? "").trim() || null;
   const is_department_head = formData.get("is_department_head") === "on";
   const is_admin = formData.get("is_admin") === "on";
+  // Only present in the edit form (showStatus). Absent on create → false,
+  // but createTeacher ignores this and always inserts is_active: true.
+  const is_active = formData.get("is_active") === "on";
 
   const fieldErrors: TeacherFormState["fieldErrors"] = {};
 
@@ -82,6 +87,7 @@ function parseForm(formData: FormData, requirePassword: boolean):
       email,
       phone,
       is_admin,
+      is_active,
       position,
       department,
       is_department_head,
@@ -439,9 +445,10 @@ export async function deleteTeacher(formData: FormData) {
  * NOT updated here:
  * - username (locked — it's the auth identity)
  * - password (separate "reset password" flow — Phase 1.9.6)
- * - is_active (separate toggle action — Phase 1.9.5)
  *
- * UPDATED here (User spec 2026-05-22):
+ * UPDATED here:
+ * - is_active — moved from the list toggle into the edit form
+ *   (user spec 2026-05-31)
  * - role can flip between 'teacher' ↔ 'admin' via the `is_admin`
  *   checkbox. Flipping role ALSO rewrites the auth-side email so the
  *   login domain (admin.pp5.local vs teacher.pp5.local) matches.
@@ -508,6 +515,8 @@ export async function updateTeacher(
       email: v.email,
       phone: v.phone,
       role: newRole,
+      // is_active now lives in the edit form (replaces the old list toggle).
+      is_active: v.is_active,
     })
     .eq("id", teacher.user_id);
   if (userError) {

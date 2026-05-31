@@ -6,6 +6,8 @@ import { Suspense } from "react";
 import { getCurrentTerm, semesterStateOf } from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
 import { DirectPrintButton } from "../../_components/direct-print-button";
+import { FilterNavProvider } from "../_components/filter-nav-context";
+import { FilterNavGate } from "../_components/filter-nav-gate";
 import {
   FixedEvalGrid,
   type FixedColumn,
@@ -197,30 +199,42 @@ export default async function CompetencyPage({ searchParams }: Props) {
         }
       />
 
-      <Card padding="sm" className="mb-4">
-        <CompetencySelector
-          grades={grades}
-          selectedGradeId={selectedGrade.id}
-          rooms={rooms}
-          selectedRoomId={selectedClassroom.id}
-        />
-      </Card>
+      <FilterNavProvider>
+        <Card padding="sm" className="mb-4">
+          <CompetencySelector
+            grades={grades}
+            selectedGradeId={selectedGrade.id}
+            rooms={rooms}
+            selectedRoomId={selectedClassroom.id}
+          />
+        </Card>
 
-      <Suspense
-        key={`${selectedClassroom.id}-${term?.semester ?? 1}`}
-        fallback={
-          <Card padding={false} className="overflow-hidden">
-            <div className="p-16 text-center text-sm text-zinc-400">
-              กำลังโหลดข้อมูล…
-            </div>
-          </Card>
-        }
-      >
-        <GridSection
-          classroomId={selectedClassroom.id}
-          yearId={currentYear.id}
-        />
-      </Suspense>
+        <FilterNavGate
+          fallback={
+            <Card padding={false} className="overflow-hidden">
+              <div className="p-16 text-center text-sm text-zinc-400">
+                กำลังโหลดข้อมูล…
+              </div>
+            </Card>
+          }
+        >
+          <Suspense
+            key={`${selectedClassroom.id}-${term?.semester ?? 1}`}
+            fallback={
+              <Card padding={false} className="overflow-hidden">
+                <div className="p-16 text-center text-sm text-zinc-400">
+                  กำลังโหลดข้อมูล…
+                </div>
+              </Card>
+            }
+          >
+            <GridSection
+              classroomId={selectedClassroom.id}
+              yearId={currentYear.id}
+            />
+          </Suspense>
+        </FilterNavGate>
+      </FilterNavProvider>
     </>
   );
 }

@@ -69,7 +69,11 @@ export function Pp5ClassSelectorForm({ classrooms }: Props) {
     return Array.from(seen.values()).sort((a, b) => a.sort - b.sort);
   }, [classrooms]);
 
-  const [gradeId, setGradeId] = useState<string>(grades[0]?.id ?? "");
+  // Start with NO grade selected so the preview doesn't auto-load the
+  // first grade (ป.1) on entry — admin must pick a ระดับชั้น first.
+  // User spec 2026-05-31: "เมื่อเข้ามาจะแสดง ป.1 ทันที ให้แก้ใหม่คือ
+  // ให้เลือกชั้นก่อนค่อยแสดง".
+  const [gradeId, setGradeId] = useState<string>("");
 
   const rooms = useMemo(
     () => classrooms.filter((c) => c.grade_id === gradeId),
@@ -224,6 +228,7 @@ export function Pp5ClassSelectorForm({ classrooms }: Props) {
                   }}
                   className="rounded-md border border-zinc-300 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none"
                 >
+                  <option value="">— เลือกระดับชั้น —</option>
                   {grades.map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.label}
@@ -408,22 +413,26 @@ export function Pp5ClassSelectorForm({ classrooms }: Props) {
               <div className="pp5-split-empty">
                 <div className="flex flex-col items-center text-center">
                   <p className="text-sm font-medium text-zinc-700">
-                    {rooms.length === 0
+                    {classrooms.length === 0
                       ? "ยังไม่มีห้องเรียน"
-                      : !selectedRoom
-                        ? "เลือกห้องเรียนก่อน"
-                        : enabledSections.length === 0
-                          ? "ยังไม่ได้เลือกส่วนที่จะพิมพ์"
-                          : "ยังไม่พร้อม"}
+                      : !gradeId
+                        ? "เลือกระดับชั้นก่อน"
+                        : !selectedRoom
+                          ? "เลือกห้องเรียนก่อน"
+                          : enabledSections.length === 0
+                            ? "ยังไม่ได้เลือกส่วนที่จะพิมพ์"
+                            : "ยังไม่พร้อม"}
                   </p>
                   <p className="mt-1 text-xs text-zinc-500">
-                    {rooms.length === 0
+                    {classrooms.length === 0
                       ? "เพิ่มห้องเรียนที่เมนูตั้งค่าก่อน"
-                      : !selectedRoom
-                        ? "เลือกที่ dropdown ในแท็ปตั้งค่า เพื่อโหลดพรีวิว"
-                        : enabledSections.length === 0
-                          ? "เปิดอย่างน้อย 1 รายการในแท็ปตั้งค่า"
-                          : ""}
+                      : !gradeId
+                        ? "เลือกระดับชั้นที่ dropdown ในแท็ปตั้งค่า"
+                        : !selectedRoom
+                          ? "เลือกที่ dropdown ในแท็ปตั้งค่า เพื่อโหลดพรีวิว"
+                          : enabledSections.length === 0
+                            ? "เปิดอย่างน้อย 1 รายการในแท็ปตั้งค่า"
+                            : ""}
                   </p>
                   <button
                     type="button"

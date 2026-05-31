@@ -7,6 +7,9 @@ import { Suspense } from "react";
 import { getCurrentTerm } from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
 import { DirectPrintButton } from "../../../_components/direct-print-button";
+import { FilterNavProvider } from "../../_components/filter-nav-context";
+import { FilterNavGate } from "../../_components/filter-nav-gate";
+import { FilterNavLink } from "../../_components/filter-nav-link";
 import { BySubjectSelector } from "./selector";
 import {
   SubjectAttendanceGrid,
@@ -430,6 +433,10 @@ export default async function BySubjectPage({ searchParams }: Props) {
         }
       />
 
+      {/* FilterNavProvider wraps the selector + week tabs + grid so changing
+          ชั้น/ห้อง/วิชา/สัปดาห์ paints the loading state at 0ms (the grid
+          swaps to <GridLoadingFallback> via <FilterNavGate>). */}
+      <FilterNavProvider>
       {/* Top selector card */}
       <Card padding="sm" className="mb-4">
         <BySubjectSelector
@@ -454,13 +461,13 @@ export default async function BySubjectPage({ searchParams }: Props) {
       {!isPrimary && (
         <p className="mb-2 text-xs text-zinc-500">
           กำลังแสดง{" "}
-          <strong className="text-zinc-700">เทอม {currentSemester}</strong>{" "}
-          (เทอมเรียนปัจจุบันของโรงเรียน) ·{" "}
+          <strong className="text-zinc-700">ภาคเรียนที่ {currentSemester}</strong>{" "}
+          (ภาคเรียนปัจจุบันของโรงเรียน) ·{" "}
           <Link
             href="/setup/academic-years"
             className="font-medium text-blue-700 hover:underline"
           >
-            เปลี่ยนเทอมปัจจุบัน
+            เปลี่ยนภาคเรียนปัจจุบัน
           </Link>
         </p>
       )}
@@ -507,7 +514,7 @@ export default async function BySubjectPage({ searchParams }: Props) {
             {(["1", "2", "3", "4"] as WeekTab[]).map((id) => {
               const isActive = id === tab;
               return (
-                <Link
+                <FilterNavLink
                   key={id}
                   href={buildTabUrl(id)}
                   aria-current={isActive ? "page" : undefined}
@@ -518,11 +525,14 @@ export default async function BySubjectPage({ searchParams }: Props) {
                   }
                 >
                   {TAB_LABEL_BY_TAB[id]}
-                </Link>
+                </FilterNavLink>
               );
             })}
           </div>
 
+          {/* Gate the grid (not the header/tabs) — grid swaps to the spinner
+              the instant a tab/selector changes. */}
+          <FilterNavGate fallback={<GridLoadingFallback />}>
           <Suspense
             key={`${selectedOfferingId}-${tab}`}
             fallback={<GridLoadingFallback />}
@@ -538,8 +548,10 @@ export default async function BySubjectPage({ searchParams }: Props) {
               totalSlots={totalSlots}
             />
           </Suspense>
+          </FilterNavGate>
         </Card>
       )}
+      </FilterNavProvider>
     </>
   );
 }

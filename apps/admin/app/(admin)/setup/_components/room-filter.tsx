@@ -2,6 +2,7 @@
 
 import { Select } from "@pp5/ui";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useFilterNav } from "./filter-nav-context";
 
 export type RoomFilterOption = {
   id: string;
@@ -34,6 +35,9 @@ export function RoomFilter({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // Fire the table skeleton at 0ms on selection — see filter-nav-context.
+  // No-op on pages without a <FilterNavProvider> (default context).
+  const { startNav } = useFilterNav();
 
   return (
     <div className="flex items-center gap-2">
@@ -41,6 +45,7 @@ export function RoomFilter({
       <Select
         value={current}
         onChange={(e) => {
+          startNav();
           const next = new URLSearchParams(searchParams.toString());
           if (e.target.value) next.set(param, e.target.value);
           else next.delete(param);

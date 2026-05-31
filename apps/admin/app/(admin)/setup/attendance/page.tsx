@@ -7,6 +7,9 @@ import { getCurrentTerm, semesterStateOf } from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
 import type { AttendanceStatus } from "./actions";
 import { DirectPrintButton } from "../../_components/direct-print-button";
+import { FilterNavProvider } from "../_components/filter-nav-context";
+import { FilterNavGate } from "../_components/filter-nav-gate";
+import { FilterNavLink } from "../_components/filter-nav-link";
 import { AttendanceGrid, type StudentRow } from "./attendance-grid";
 import { AttendanceSummarySection } from "./summary-section";
 import {
@@ -256,6 +259,10 @@ export default async function AttendancePage({ searchParams }: Props) {
         }
       />
 
+      {/* FilterNavProvider wraps the selector + tab/month links + grid so
+          changing ชั้น/ห้อง/ภาคเรียน/เดือน paints the loading state at 0ms
+          (the grid swaps to <GridLoadingFallback> via <FilterNavGate>). */}
+      <FilterNavProvider>
       {/* Top selector card */}
       <Card padding="sm" className="mb-4">
         <AttendanceSelector
@@ -281,8 +288,8 @@ export default async function AttendancePage({ searchParams }: Props) {
         <div className="mb-2 flex gap-1 border-b border-zinc-200">
           {(
             [
-              { id: "1" as TabValue, sem: 1 as 1 | 2, base: "เทอม 1" },
-              { id: "2" as TabValue, sem: 2 as 1 | 2, base: "เทอม 2" },
+              { id: "1" as TabValue, sem: 1 as 1 | 2, base: "ภาคเรียนที่ 1" },
+              { id: "2" as TabValue, sem: 2 as 1 | 2, base: "ภาคเรียนที่ 2" },
               { id: "summary" as TabValue, sem: null, base: "🏆 สรุปรวม" },
             ]
           ).map((t) => {
@@ -299,7 +306,7 @@ export default async function AttendancePage({ searchParams }: Props) {
                 ? undefined
                 : defaultMonthForTerm(t.id === "2" ? 2 : 1);
             return (
-              <Link
+              <FilterNavLink
                 key={t.id}
                 href={buildUrl(t.id, nextMonth)}
                 aria-current={isActive ? "page" : undefined}
@@ -311,7 +318,7 @@ export default async function AttendancePage({ searchParams }: Props) {
               >
                 {icon}
                 {t.base}
-              </Link>
+              </FilterNavLink>
             );
           })}
         </div>
@@ -319,13 +326,13 @@ export default async function AttendancePage({ searchParams }: Props) {
         // Secondary — show a small bar pointing at /setup/academic-years
         // for switching the active term (no in-page switcher).
         <p className="mb-2 text-xs text-zinc-500">
-          กำลังแสดง <strong className="text-zinc-700">เทอม {currentSemester}</strong>
-          {" "}(เทอมเรียนปัจจุบันของโรงเรียน) ·{" "}
+          กำลังแสดง <strong className="text-zinc-700">ภาคเรียนที่ {currentSemester}</strong>
+          {" "}(ภาคเรียนปัจจุบันของโรงเรียน) ·{" "}
           <Link
             href="/setup/academic-years"
             className="font-medium text-blue-700 hover:underline"
           >
-            เปลี่ยนเทอมปัจจุบัน
+            เปลี่ยนภาคเรียนปัจจุบัน
           </Link>
         </p>
       )}
@@ -336,7 +343,7 @@ export default async function AttendancePage({ searchParams }: Props) {
           {TERM_MONTHS[tab === "2" ? 2 : 1].map((m) => {
             const isActive = m === selectedMonth;
             return (
-              <Link
+              <FilterNavLink
                 key={m}
                 href={buildUrl(tab, m)}
                 aria-current={isActive ? "page" : undefined}
@@ -347,10 +354,10 @@ export default async function AttendancePage({ searchParams }: Props) {
                 }
               >
                 {THAI_MONTH_SHORT[m - 1]}
-              </Link>
+              </FilterNavLink>
             );
           })}
-          <Link
+          <FilterNavLink
             href={buildUrl(tab, -1)} // -1 = summary for this term
             aria-current={isTermSummary ? "page" : undefined}
             className={
@@ -360,7 +367,7 @@ export default async function AttendancePage({ searchParams }: Props) {
             }
           >
             สรุป
-          </Link>
+          </FilterNavLink>
         </div>
       )}
 
@@ -373,12 +380,12 @@ export default async function AttendancePage({ searchParams }: Props) {
               "สรุปรวม"
             ) : isTermSummary ? (
               <>
-                เทอม {tab} · สรุป{" "}
+                ภาคเรียนที่ {tab} · สรุป{" "}
                 <span className="text-zinc-500">{currentYear.year_be}</span>
               </>
             ) : (
               <>
-                เทอม {tab} · {THAI_MONTH_SHORT[selectedMonth - 1]}{" "}
+                ภาคเรียนที่ {tab} · {THAI_MONTH_SHORT[selectedMonth - 1]}{" "}
                 <span className="text-zinc-500">{currentYear.year_be}</span>
               </>
             )}
@@ -399,7 +406,7 @@ export default async function AttendancePage({ searchParams }: Props) {
               return (
                 <DirectPrintButton
                   url={url}
-                  title={`พิมพ์รายงานสรุปเทอม ${tab}`}
+                  title={`พิมพ์รายงานสรุปภาคเรียนที่ ${tab}`}
                 />
               );
             }
@@ -410,6 +417,9 @@ export default async function AttendancePage({ searchParams }: Props) {
             );
           })()}
         </div>
+        {/* Gate the grid (not the header) — header stays put while the grid
+            swaps to the spinner the instant a tab/month/selector changes. */}
+        <FilterNavGate fallback={<GridLoadingFallback />}>
         {tab === "summary" ? (
           <Suspense
             key={`summary-${selectedClassroom.id}-${currentYear.year_be}`}
@@ -434,7 +444,7 @@ export default async function AttendancePage({ searchParams }: Props) {
         ) : termState === "future" ? (
           <div className="p-12 text-center">
             <p className="text-sm text-zinc-600">
-              ⏳ ยังไม่เริ่ม<strong>เทอม {tab}</strong>
+              ⏳ ยังไม่เริ่ม<strong>ภาคเรียนที่ {tab}</strong>
             </p>
             <p className="mt-2 text-xs text-zinc-500">
               admin เปลี่ยน "ภาคเรียนปัจจุบัน" ที่{" "}
@@ -444,7 +454,7 @@ export default async function AttendancePage({ searchParams }: Props) {
               >
                 /setup/academic-years
               </Link>{" "}
-              เพื่อเริ่มเทอมนี้
+              เพื่อเริ่มภาคเรียนนี้
             </p>
           </div>
         ) : (
@@ -464,7 +474,9 @@ export default async function AttendancePage({ searchParams }: Props) {
             />
           </Suspense>
         )}
+        </FilterNavGate>
       </Card>
+      </FilterNavProvider>
     </>
   );
 }
@@ -598,7 +610,7 @@ async function MonthGridSection({
         <div className="mx-3 mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           <span aria-hidden>🔒</span>
           <div>
-            <strong>เทอม {term} ถูกล็อค</strong> · ดูได้ แก้ไม่ได้ · admin
+            <strong>ภาคเรียนที่ {term} ถูกล็อค</strong> · ดูได้ แก้ไม่ได้ · admin
             เปลี่ยน "ภาคเรียนปัจจุบัน" ที่{" "}
             <Link
               href="/setup/academic-years"

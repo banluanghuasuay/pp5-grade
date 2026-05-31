@@ -3,10 +3,12 @@ import { Card, PageHeader } from "@pp5/ui";
 import { GraduationCap, History, Pencil, Upload } from "lucide-react";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/teacher-scope";
+import { FilterNavProvider } from "../_components/filter-nav-context";
 import { GradeFilter } from "../_components/grade-filter";
 import { RoomFilter } from "../_components/room-filter";
 import { DeleteStudentsDialog } from "./delete-dialog";
 import { DeleteSingleStudentButton } from "./delete-single-button";
+import { NavigationGate } from "./navigation-gate";
 import { RenumberClassroomButton } from "./renumber-button";
 
 export const metadata = {
@@ -275,7 +277,10 @@ export default async function StudentsPage({ searchParams }: Props) {
   });
 
   return (
-    <>
+    // FilterNavProvider wraps the whole page so the ชั้น/ห้อง filters
+    // (which call startNav) and the gate (which reads pending) share the
+    // same nav state — the table paints a skeleton instantly on change.
+    <FilterNavProvider>
       {queryError && (
         <div
           role="alert"
@@ -396,52 +401,67 @@ export default async function StudentsPage({ searchParams }: Props) {
         </p>
       )}
 
-      {!error && !shouldShowList && (
-        <Card variant="dashed" padding={false} className="p-12 text-center">
-          <p className="text-sm text-zinc-500">
-            {!gradeFilter
-              ? "เลือกชั้นเพื่อแสดงรายชื่อนักเรียน"
-              : "เลือกห้องเพื่อแสดงรายชื่อนักเรียน"}
-          </p>
-        </Card>
-      )}
+      {/* Skeleton-on-filter-change: the ชั้น/ห้อง dropdowns call startNav()
+          in onChange, so the gate paints a table skeleton at 0ms — before
+          the new roster is fetched. */}
+      {!error && (
+        <NavigationGate>
+          {!shouldShowList && (
+            <Card variant="dashed" padding={false} className="p-12 text-center">
+              <p className="text-sm text-zinc-500">
+                {!gradeFilter
+                  ? "เลือกชั้นเพื่อแสดงรายชื่อนักเรียน"
+                  : "เลือกห้องเพื่อแสดงรายชื่อนักเรียน"}
+              </p>
+            </Card>
+          )}
 
-      {!error && shouldShowList && filteredRows.length === 0 && (
-        <Card variant="dashed" padding={false} className="p-12 text-center">
-          <p className="text-sm text-zinc-500">
-            ยังไม่มีนักเรียนใน
-            {needsRoomChoice ? "ห้องนี้" : "ระดับชั้นนี้"}
-          </p>
-          <Link
-            href="/setup/students/new"
-            className="mt-3 inline-block text-sm font-medium text-zinc-900 underline"
-          >
-            เพิ่มนักเรียน
-          </Link>
-        </Card>
-      )}
+          {shouldShowList && filteredRows.length === 0 && (
+            <Card variant="dashed" padding={false} className="p-12 text-center">
+              <p className="text-sm text-zinc-500">
+                ยังไม่มีนักเรียนใน
+                {needsRoomChoice ? "ห้องนี้" : "ระดับชั้นนี้"}
+              </p>
+              <Link
+                href="/setup/students/new"
+                className="mt-3 inline-block text-sm font-medium text-zinc-900 underline"
+              >
+                เพิ่มนักเรียน
+              </Link>
+            </Card>
+          )}
 
-      {!error && shouldShowList && filteredRows.length > 0 && (
-        <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
-          <table className="w-full min-w-[480px] text-sm">
+          {shouldShowList && filteredRows.length > 0 && (
+            <div className="rounded-md border border-zinc-200 bg-white">
+          {/* table-fixed + per-column widths so the table fits the mobile
+              viewport WITHOUT horizontal scroll — the name column takes the
+              remaining space and truncates with "…" when too long. User spec
+              2026-05-31: "จอเล็กไม่ต้องเลื่อนซ้ายขวา · ชื่อยาวทำ ... ต่อท้าย". */}
+          <table className="w-full table-fixed text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500">
               <tr>
                 {/* Hide "ห้อง" column on mobile — same info is already
                     in the room dropdown filter above the table. User
                     spec 2026-05-22: ไม่ต้องแสดงคอลัมน์ที่ห้อง. */}
-                <th className="hidden px-3 py-2 font-medium md:table-cell">
+                <th className="hidden w-16 whitespace-nowrap px-3 py-2 font-medium md:table-cell">
                   ห้อง
                 </th>
-                <th className="px-3 py-2 font-medium">เลขที่</th>
-                <th className="px-3 py-2 font-medium">รหัสนักเรียน</th>
-                <th className="px-3 py-2 font-medium">ชื่อ-นามสกุล</th>
-                <th className="px-3 py-2 text-right font-medium">การจัดการ</th>
+                <th className="w-14 whitespace-nowrap px-2 py-2 font-medium sm:px-3">
+                  เลขที่
+                </th>
+                <th className="w-16 whitespace-nowrap px-2 py-2 font-medium sm:w-24 sm:px-3">
+                  รหัส
+                </th>
+                <th className="px-2 py-2 font-medium sm:px-3">ชื่อ-นามสกุล</th>
+                <th className="w-20 whitespace-nowrap px-2 py-2 text-right font-medium sm:px-3">
+                  จัดการ
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200">
               {filteredRows.map((r) => (
                 <tr key={r.id} className="hover:bg-zinc-50">
-                  <td className="hidden px-3 py-1 font-medium text-zinc-900 md:table-cell">
+                  <td className="hidden whitespace-nowrap px-3 py-1 font-medium text-zinc-900 md:table-cell">
                     {r.enrollment ? (
                       <span>{r.enrollment.classroom_display}</span>
                     ) : (
@@ -450,19 +470,21 @@ export default async function StudentsPage({ searchParams }: Props) {
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-1 font-mono text-zinc-700">
+                  <td className="whitespace-nowrap px-2 py-1 font-mono text-zinc-700 sm:px-3">
                     {r.enrollment?.student_number ?? "—"}
                   </td>
-                  <td className="px-3 py-1 font-mono text-xs text-zinc-700">
+                  <td className="whitespace-nowrap px-2 py-1 font-mono text-xs text-zinc-700 sm:px-3">
                     {r.student_code}
                   </td>
-                  <td className="px-3 py-1">
-                    <span className="font-medium text-zinc-900">
+                  <td className="px-2 py-1 sm:px-3">
+                    {/* block truncate → ชื่อยาวตัดด้วย "…" (ไม่ดันตารางให้
+                        ล้นจอ · table-fixed ให้คอลัมน์นี้กว้างเท่าที่เหลือ) */}
+                    <span className="block truncate font-medium text-zinc-900">
                       {r.title}
                       {r.first_name} {r.last_name}
                     </span>
                   </td>
-                  <td className="px-3 py-1 text-right">
+                  <td className="px-2 py-1 text-right sm:px-3">
                     <div className="inline-flex items-center justify-end gap-0.5">
                       <Link
                         href={`/setup/students/${r.id}`}
@@ -486,8 +508,10 @@ export default async function StudentsPage({ searchParams }: Props) {
               ))}
             </tbody>
           </table>
-        </div>
+            </div>
+          )}
+        </NavigationGate>
       )}
-    </>
+    </FilterNavProvider>
   );
 }

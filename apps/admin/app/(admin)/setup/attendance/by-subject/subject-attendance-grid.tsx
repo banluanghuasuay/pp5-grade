@@ -239,7 +239,10 @@ export function SubjectAttendanceGrid({
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div>
+      {/* Only the TABLE scrolls horizontally — the legend below sits
+          outside this wrapper so it stays locked in place. */}
+      <div className="overflow-x-auto">
       {/* border-separate (not collapse) — sticky cells with border-collapse
           can leak scrolled content through their right edge in some browsers.
           border-spacing-0 keeps the visual identical to collapse mode. */}
@@ -292,9 +295,11 @@ export function SubjectAttendanceGrid({
                 </th>
               );
             })}
+            {/* "รวม" is NOT sticky — it scrolls with the grid (only ที่/ชื่อ
+                stay pinned on the left). User spec 2026-05-31. */}
             <th
               rowSpan={2}
-              className="sticky right-0 z-20 min-w-[6rem] border-b border-l border-zinc-200 bg-zinc-50 px-2 py-1.5 text-center text-xs font-medium text-zinc-500"
+              className="min-w-[6rem] border-b border-l border-zinc-200 bg-zinc-50 px-2 py-1.5 text-center text-xs font-medium text-zinc-500"
             >
               รวม
             </th>
@@ -413,8 +418,7 @@ export function SubjectAttendanceGrid({
                   });
                 })}
                 <td
-                  className="sticky right-0 z-20 border-b border-l border-zinc-200 bg-white px-2 py-1 text-center text-xs"
-                  style={{ backgroundColor: "#ffffff" }}
+                  className="border-b border-l border-zinc-200 bg-white px-2 py-1 text-center text-xs"
                 >
                   <div className="font-mono font-semibold text-zinc-900">
                     {totals.present}/{totalSlots}
@@ -437,8 +441,10 @@ export function SubjectAttendanceGrid({
           })}
         </tbody>
       </table>
+      </div>
 
-      {/* Legend */}
+      {/* Legend — outside the horizontal scroll so it stays locked while the
+          grid scrolls left/right. User spec 2026-05-31. */}
       <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-600">
         <span className="font-medium">ความหมายช่อง:</span>
         <span className="inline-flex items-center gap-1">

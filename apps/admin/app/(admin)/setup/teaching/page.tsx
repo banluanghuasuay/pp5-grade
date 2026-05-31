@@ -4,6 +4,7 @@ import { ClipboardCheck } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { requireAdmin } from "@/lib/teacher-scope";
+import { FilterNavProvider } from "../_components/filter-nav-context";
 import { ClassroomSelector } from "./classroom-selector";
 import { NavigationGate } from "./navigation-gate";
 import { TeachingSkeleton } from "./teaching-skeleton";
@@ -195,6 +196,10 @@ export default async function TeachingPage({ searchParams }: Props) {
         }
       />
 
+      {/* FilterNavProvider wraps BOTH the selector (calls startNav) and the
+          gate (reads pending) so a ชั้น/ห้อง change paints the skeleton
+          instantly. */}
+      <FilterNavProvider>
       <div className="mb-6">
         <ClassroomSelector
           grades={sortedGrades.map((g) => ({
@@ -236,20 +241,13 @@ export default async function TeachingPage({ searchParams }: Props) {
         </Card>
       ) : (
         // Two-layer loading UX so admin sees the skeleton at 0ms:
-        //   1. <NavigationGate> — client component watching useSearchParams.
-        //      Swaps to <TeachingSkeleton> the instant the URL changes,
-        //      before any RSC has been requested. (Solves the "stale prior
-        //      table flashes for ~200ms after clicking" problem.)
+        //   1. <NavigationGate> — flips to <TeachingSkeleton> the instant
+        //      the selector calls startNav() (before any RSC request).
         //   2. <Suspense key={classroomId}> — when the new classroom's RSC
         //      streams in, React mounts a fresh tree (key change) and
-        //      shows the same skeleton until the await chain in
-        //      TeachingTableSection resolves.
-        // Both render the same skeleton component → no visual jump
-        // between the two phases.
-        <NavigationGate
-          renderedGradeId={selectedGrade.id}
-          renderedRoomId={selectedClassroom.id}
-        >
+        //      shows the same skeleton until TeachingTableSection resolves.
+        // Both render the same skeleton → no visual jump between phases.
+        <NavigationGate>
           <Suspense
             key={`teaching-${selectedClassroom.id}`}
             fallback={<TeachingSkeleton />}
@@ -267,6 +265,7 @@ export default async function TeachingPage({ searchParams }: Props) {
           </Suspense>
         </NavigationGate>
       )}
+      </FilterNavProvider>
     </>
   );
 }

@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { logoutAction } from "../_actions/auth";
 import { MobileHeader } from "./_components/mobile-header";
 import { MobileNavProvider } from "./_components/mobile-nav-context";
+import { NavigationOverlay } from "./_components/navigation-overlay";
+import { NavigationStatusProvider } from "./_components/navigation-status-context";
 import { PageContextBar } from "./_components/page-context-bar";
 import { Sidebar } from "./_components/sidebar";
 
@@ -49,27 +51,35 @@ export default async function AppLayout({
 
   return (
     <MobileNavProvider>
-      <div className="flex min-h-screen flex-col bg-zinc-50 md:flex-row">
-        <Sidebar
-          isAdmin={isAdmin}
-          user={{
-            title: auth.profile.title,
-            fullName: auth.profile.full_name,
-            roleLabel,
-            username: auth.profile.username,
-          }}
-          logoutAction={logoutAction}
-          schoolLogoUrl={schoolLogoUrl}
-        />
+      <NavigationStatusProvider>
+        <div className="flex min-h-screen flex-col bg-zinc-50 md:flex-row">
+          <Sidebar
+            isAdmin={isAdmin}
+            user={{
+              title: auth.profile.title,
+              fullName: auth.profile.full_name,
+              roleLabel,
+              username: auth.profile.username,
+            }}
+            logoutAction={logoutAction}
+            schoolLogoUrl={schoolLogoUrl}
+          />
 
-        <MobileHeader userLabel={userLabel} logoutAction={logoutAction} />
+          <MobileHeader userLabel={userLabel} logoutAction={logoutAction} />
 
-        <main className="flex-1 overflow-x-hidden">
-          {/* Phase 2.6 — top context strip on every page (breadcrumb + term) */}
-          <PageContextBar />
-          <div className="mx-auto max-w-6xl p-6 sm:p-8">{children}</div>
-        </main>
-      </div>
+          <main className="flex-1 overflow-x-hidden">
+            {/* Phase 2.6 — top context strip on every page (breadcrumb + term) */}
+            <PageContextBar />
+            <div className="mx-auto max-w-6xl p-6 sm:p-8">
+              {/* Skeleton overlay during cross-page menu navigation, so the
+                  stale page doesn't sit frozen while the new route streams
+                  in. In-page filters (ชั้น/ห้อง dropdowns) use their own
+                  per-page gates instead. */}
+              <NavigationOverlay>{children}</NavigationOverlay>
+            </div>
+          </main>
+        </div>
+      </NavigationStatusProvider>
     </MobileNavProvider>
   );
 }

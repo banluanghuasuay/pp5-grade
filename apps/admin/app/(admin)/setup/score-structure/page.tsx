@@ -7,6 +7,9 @@ import { Suspense } from "react";
 import { getCurrentTerm, semesterStateOf } from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
 import { DirectPrintButton } from "../../_components/direct-print-button";
+import { FilterNavProvider } from "../_components/filter-nav-context";
+import { FilterNavGate } from "../_components/filter-nav-gate";
+import { FilterNavLink } from "../_components/filter-nav-link";
 import {
   ensureCategorySlots,
   ensureSecondaryCategorySlots,
@@ -384,6 +387,7 @@ export default async function ScoresPage({ searchParams }: Props) {
         }
       />
 
+      <FilterNavProvider>
       {/* Top selector card */}
       <Card padding="sm" className="mb-4">
         <ScoreSelector
@@ -416,7 +420,9 @@ export default async function ScoresPage({ searchParams }: Props) {
         />
       )}
 
-      {/* Body — depends on tab */}
+      {/* Body — depends on tab. Gate it so changing ชั้น/ห้อง/วิชา/แท็บ
+          paints the loading card instantly. */}
+      <FilterNavGate fallback={<TableLoadingCard />}>
       {!selectedSubject ? (
         <Card variant="dashed" className="p-12 text-center">
           <p className="text-sm text-zinc-500">
@@ -472,6 +478,8 @@ export default async function ScoresPage({ searchParams }: Props) {
           )}
         </Suspense>
       )}
+      </FilterNavGate>
+      </FilterNavProvider>
     </>
   );
 }
@@ -603,7 +611,7 @@ export function TabNav({
         if (subjectId) params.set("subject", subjectId);
         params.set("tab", t.id);
         return (
-          <Link
+          <FilterNavLink
             key={t.id}
             href={`${basePath}?${params.toString()}`}
             aria-current={isActive ? "page" : undefined}
@@ -614,7 +622,7 @@ export function TabNav({
             }
           >
             {t.label}
-          </Link>
+          </FilterNavLink>
         );
       })}
     </div>

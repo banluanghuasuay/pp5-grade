@@ -3,6 +3,7 @@
 import { Select } from "@pp5/ui";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { useFilterNav } from "../_components/filter-nav-context";
 
 export type GradeOption = {
   id: string;
@@ -49,9 +50,12 @@ export function GradeRoomSelector({
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  // Fire the table skeleton at 0ms on selection — see filter-nav-context.
+  const { startNav } = useFilterNav();
 
   const onGradeChange = (gradeId: string) => {
     if (!gradeId) return;
+    startNav();
     startTransition(() => {
       router.push(`/setup/subjects?grade=${gradeId}`);
     });
@@ -60,6 +64,7 @@ export function GradeRoomSelector({
   const onRoomChange = (roomId: string) => {
     const room = rooms.find((r) => r.id === roomId);
     if (!room?.planId) return; // room has no plan yet — nothing to navigate to
+    startNav();
     startTransition(() => {
       router.push(
         `/setup/subjects?grade=${selectedGradeId}&plan=${room.planId}`,

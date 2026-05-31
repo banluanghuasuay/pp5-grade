@@ -2,6 +2,7 @@
 
 import { Select } from "@pp5/ui";
 import { useRouter } from "next/navigation";
+import { useFilterNav } from "../../_components/filter-nav-context";
 
 export type GradeOption = { id: string; label: string };
 export type RoomOption = { id: string; label: string };
@@ -46,12 +47,15 @@ export function BySubjectSelector({
   tab,
 }: Props) {
   const router = useRouter();
+  // Fire the grid skeleton at 0ms on selection — see filter-nav-context.
+  const { startNav } = useFilterNav();
 
   const navigate = (next: {
     grade?: string;
     room?: string;
     subject?: string;
   }) => {
+    startNav();
     const params = new URLSearchParams();
     const gradeId = next.grade ?? selectedGradeId;
     if (gradeId) params.set("grade", gradeId);

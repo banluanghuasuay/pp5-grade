@@ -35,7 +35,8 @@ export default async function EditTeacherPage({ params }: Props) {
           title,
           email,
           phone,
-          role
+          role,
+          is_active
         )
       `,
       )
@@ -72,6 +73,7 @@ export default async function EditTeacherPage({ params }: Props) {
           departments={departments}
           showPassword={false}
           lockUsername={true}
+          showStatus={true}
           submitLabel="บันทึกการแก้ไข"
           defaultValues={{
             id: teacher.id,
@@ -84,6 +86,7 @@ export default async function EditTeacherPage({ params }: Props) {
             position: teacher.position,
             department: teacher.department,
             is_department_head: teacher.is_department_head,
+            is_active: teacher.user.is_active,
           }}
         />
       </Card>

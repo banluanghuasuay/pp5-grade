@@ -224,10 +224,10 @@ export async function AttendanceSummarySection({
                 ชื่อ – สกุล
               </th>
               <th colSpan={term1Months.length} className="att-group">
-                เทอม 1
+                ภาคเรียนที่ 1
               </th>
               <th colSpan={term2Months.length} className="att-group">
-                เทอม 2
+                ภาคเรียนที่ 2
               </th>
               <th colSpan={5} rowSpan={2} className="att-group">
                 สรุป

@@ -2,6 +2,7 @@
 
 import { Select } from "@pp5/ui";
 import { useRouter } from "next/navigation";
+import { useFilterNav } from "../_components/filter-nav-context";
 
 export type GradeOption = { id: string; label: string };
 export type RoomOption = { id: string; label: string };
@@ -21,8 +22,10 @@ export function CompetencySelector({
   selectedRoomId,
 }: Props) {
   const router = useRouter();
+  const { startNav } = useFilterNav();
 
   const navigate = (grade: string, room: string) => {
+    startNav();
     const params = new URLSearchParams();
     if (grade) params.set("grade", grade);
     if (room) params.set("room", room);

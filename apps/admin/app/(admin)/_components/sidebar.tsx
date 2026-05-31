@@ -35,16 +35,29 @@ import {
 } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMobileNav } from "./mobile-nav-context";
+import { useNavigationStatus } from "./navigation-status-context";
 
 /**
  * Renders the link icon → swaps to a spinner the moment its parent `<Link>`
  * triggers navigation. `useLinkStatus()` is provided by Next.js 16 and only
  * works when this component is rendered inside a `<Link>`.
+ *
+ * It ALSO doubles as the trigger for the page-content navigation overlay:
+ * when `pending` flips true for a link to a DIFFERENT path, it bumps the
+ * navigation token so `<NavigationOverlay>` can cover the stale page with
+ * a skeleton immediately (see navigation-status-context.tsx). We skip the
+ * bump when `href === pathname` (clicking the current page) so the overlay
+ * doesn't flash for a no-op navigation.
  */
-function LinkIcon({ icon: Icon }: { icon: LucideIcon }) {
+function LinkIcon({ icon: Icon, href }: { icon: LucideIcon; href: string }) {
   const { pending } = useLinkStatus();
+  const { bumpNav } = useNavigationStatus();
+  const pathname = usePathname();
+  useEffect(() => {
+    if (pending && href !== pathname) bumpNav();
+  }, [pending, href, pathname, bumpNav]);
   return pending ? (
     <Loader2 className="h-4 w-4 animate-spin text-primary-600" aria-hidden />
   ) : (
@@ -163,7 +176,7 @@ const SECTIONS: NavSection[] = [
       {
         href: "/setup/attendance",
         icon: CalendarCheck,
-        label: "รายวัน",
+        label: "รายวัน(โฮมรูม)",
       },
       {
         href: "/setup/attendance/by-subject",
@@ -410,7 +423,7 @@ export function Sidebar({ isAdmin, user, logoutAction, schoolLogoUrl }: Props) {
                   : "font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900",
               )}
             >
-              <LinkIcon icon={link.icon} />
+              <LinkIcon icon={link.icon} href={link.href} />
               {!collapsed && link.label}
             </Link>
           );
@@ -473,7 +486,7 @@ export function Sidebar({ isAdmin, user, logoutAction, schoolLogoUrl }: Props) {
                             : "flex items-center gap-2.5 rounded-md py-2 pl-9 pr-3 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                         }
                       >
-                        <LinkIcon icon={link.icon} />
+                        <LinkIcon icon={link.icon} href={link.href} />
                         {link.label}
                       </Link>
                     );

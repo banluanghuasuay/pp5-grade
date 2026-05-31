@@ -1,10 +1,11 @@
 import { createAdminClient } from "@pp5/database/admin";
 import { createClient } from "@pp5/database/server";
 import { Badge, Card, PageHeader } from "@pp5/ui";
-import { BookOpen, Loader2, Pencil, Plus } from "lucide-react";
+import { BookOpen, Pencil, Plus } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { requireAdmin } from "@/lib/teacher-scope";
+import { FilterNavProvider } from "../_components/filter-nav-context";
 import { ensureDefaultPlan, ensureRoomsLinked } from "./actions";
 import { CloneSubjectsDialog } from "./clone-subjects-dialog";
 import { CopyPlanButton } from "./copy-plan-button";
@@ -12,6 +13,7 @@ import { DeletePlanForm } from "./delete-plan-form";
 import { DeleteSubjectForm } from "./delete-subject-form";
 import { GradeRoomSelector } from "./grade-room-selector";
 import { NavigationGate } from "./navigation-gate";
+import { SubjectsSkeleton } from "./subjects-skeleton";
 
 export const metadata = {
   title: "จัดการวิชา · ระบบ ปพ.5",
@@ -270,6 +272,10 @@ export default async function SubjectsPage({ searchParams }: Props) {
         }
       />
 
+      {/* FilterNavProvider wraps BOTH the selector (calls startNav) and the
+          gate (reads pending) so a grade/room change paints the skeleton
+          instantly. */}
+      <FilterNavProvider>
       {/* Grade selector only — plans are per-grade, room dropdown not needed here */}
       <div className="mb-6">
         <GradeRoomSelector
@@ -397,18 +403,10 @@ export default async function SubjectsPage({ searchParams }: Props) {
             </div>
           </div>
 
-          <NavigationGate
-            renderedGradeId={selectedGrade.id}
-            renderedPlanId={selectedPlan.id}
-          >
+          <NavigationGate>
             <Suspense
               key={`subjects-${selectedGrade.id}-${selectedPlan.id}`}
-              fallback={
-                <div className="flex items-center justify-center gap-2 p-12 text-sm text-zinc-500">
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  กำลังโหลดรายวิชา…
-                </div>
-              }
+              fallback={<SubjectsSkeleton />}
             >
               <PlanSubjectsTable
                 planId={selectedPlan.id}
@@ -421,6 +419,7 @@ export default async function SubjectsPage({ searchParams }: Props) {
           </NavigationGate>
         </Card>
       </div>
+      </FilterNavProvider>
     </>
   );
 }
