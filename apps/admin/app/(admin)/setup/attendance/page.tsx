@@ -157,14 +157,58 @@ export default async function AttendancePage({ searchParams }: Props) {
     );
   }
 
-  // 3. Resolve grade + room
-  const selectedGrade =
-    sortedGrades.find((g) => g.id === params.grade) ?? sortedGrades[0];
-  const roomsInGrade = (classrooms ?? [])
-    .filter((c) => c.grade_level_id === selectedGrade.id)
-    .sort((a, b) => a.room_number - b.room_number);
-  const selectedClassroom =
-    roomsInGrade.find((r) => r.id === params.room) ?? roomsInGrade[0];
+  // 3. Resolve grade + room — don't auto-pick (admin chooses ชั้น then ห้อง
+  //    before any attendance grid shows; no auto even for single-room
+  //    grades). User spec 2026-05-31.
+  const selectedGrade = params.grade
+    ? (sortedGrades.find((g) => g.id === params.grade) ?? null)
+    : null;
+  const roomsInGrade = selectedGrade
+    ? (classrooms ?? [])
+        .filter((c) => c.grade_level_id === selectedGrade.id)
+        .sort((a, b) => a.room_number - b.room_number)
+    : [];
+  const selectedClassroom = params.room
+    ? (roomsInGrade.find((r) => r.id === params.room) ?? null)
+    : null;
+
+  // Nothing chosen yet → show just the selector + a prompt, skipping the
+  // term/month tab logic and the grid entirely.
+  if (!selectedGrade || !selectedClassroom) {
+    return (
+      <>
+        <PageHeader
+          icon={CalendarCheck}
+          iconBg="bg-blue-100 text-blue-700"
+          title="บันทึกเวลาเรียน"
+          description="เลือกระดับชั้นและห้องเพื่อเริ่มเช็คเวลาเรียน"
+        />
+        <FilterNavProvider>
+          <Card padding="sm" className="mb-4">
+            <AttendanceSelector
+              grades={sortedGrades.map((g) => ({
+                id: g.id,
+                label: g.name_short,
+              }))}
+              selectedGradeId={selectedGrade?.id ?? ""}
+              rooms={roomsInGrade.map((r) => ({
+                id: r.id,
+                label: `${selectedGrade?.name_short ?? ""}/${r.room_number}`,
+              }))}
+              selectedRoomId=""
+              term="1"
+              month={1}
+            />
+          </Card>
+          <Card variant="dashed" className="p-12 text-center">
+            <p className="text-sm text-zinc-500">
+              {!selectedGrade ? "เลือกระดับชั้นก่อน" : "เลือกห้องเรียนก่อน"}
+            </p>
+          </Card>
+        </FilterNavProvider>
+      </>
+    );
+  }
 
   // Phase 2.6 — read the school's current term for default tab + lock state
   const currentTerm = await getCurrentTerm();

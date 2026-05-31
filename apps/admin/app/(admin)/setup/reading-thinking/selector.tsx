@@ -41,6 +41,7 @@ export function ReadingThinkingSelector({
           onChange={(e) => navigate(e.target.value, "")}
           className="w-32"
         >
+          <option value="">— เลือกชั้น —</option>
           {grades.map((g) => (
             <option key={g.id} value={g.id}>
               {g.label}
@@ -49,7 +50,9 @@ export function ReadingThinkingSelector({
         </Select>
       </div>
 
-      {rooms.length > 1 && (
+      {/* Room dropdown appears once a grade is picked. Shown even for a
+          single-room grade — user spec 2026-05-31: "เลือกห้องทุกครั้ง". */}
+      {selectedGradeId && (
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-zinc-700">เลือกห้อง:</label>
           <Select
@@ -57,6 +60,7 @@ export function ReadingThinkingSelector({
             onChange={(e) => navigate(selectedGradeId, e.target.value)}
             className="w-36"
           >
+            <option value="">— เลือกห้อง —</option>
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.label}

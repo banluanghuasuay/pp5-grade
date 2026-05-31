@@ -134,44 +134,50 @@ export default async function CompetencyPage({ searchParams }: Props) {
     );
   }
 
-  const selectedGrade =
-    sortedGrades.find((g) => g.id === params.grade) ?? sortedGrades[0];
-  const roomsInGrade = (classrooms ?? [])
-    .filter((c) => c.grade_level_id === selectedGrade.id)
-    .sort((a, b) => a.room_number - b.room_number);
-  const selectedClassroom =
-    roomsInGrade.find((r) => r.id === params.room) ?? roomsInGrade[0];
+  // Don't auto-pick — admin must choose ชั้น then ห้อง first (no auto even
+  // for single-room grades). User spec 2026-05-31.
+  const selectedGrade = params.grade
+    ? (sortedGrades.find((g) => g.id === params.grade) ?? null)
+    : null;
+  const roomsInGrade = selectedGrade
+    ? (classrooms ?? [])
+        .filter((c) => c.grade_level_id === selectedGrade.id)
+        .sort((a, b) => a.room_number - b.room_number)
+    : [];
+  const selectedClassroom = params.room
+    ? (roomsInGrade.find((r) => r.id === params.room) ?? null)
+    : null;
 
-  // Homeroom teachers (both slots — equal status per user spec).
-  const { data: homerooms } = await supabase
-    .from("homeroom_assignments")
-    .select(
-      `role, teacher:teachers!teacher_id ( user:users!user_id (full_name, title) )`,
-    )
-    .eq("classroom_id", selectedClassroom.id)
-    .order("role");
-  const homeroomNames = (homerooms ?? [])
-    .filter((h) => h.teacher?.user)
-    .map(
-      (h) =>
-        `${h.teacher!.user!.title ?? ""}${h.teacher!.user!.full_name}`,
-    );
-  const homeroomLabel =
-    homeroomNames.length > 0 ? homeroomNames.join(" · ") : null;
-
-  const roomShortLabel =
-    roomsInGrade.length > 1
-      ? `${selectedGrade.name_short}/${selectedClassroom.room_number}`
-      : selectedGrade.name_short;
+  // Homeroom teachers + room label — only once a room is chosen.
+  let homeroomLabel: string | null = null;
+  let roomShortLabel = "";
+  if (selectedGrade && selectedClassroom) {
+    const { data: homerooms } = await supabase
+      .from("homeroom_assignments")
+      .select(
+        `role, teacher:teachers!teacher_id ( user:users!user_id (full_name, title) )`,
+      )
+      .eq("classroom_id", selectedClassroom.id)
+      .order("role");
+    const homeroomNames = (homerooms ?? [])
+      .filter((h) => h.teacher?.user)
+      .map(
+        (h) => `${h.teacher!.user!.title ?? ""}${h.teacher!.user!.full_name}`,
+      );
+    homeroomLabel = homeroomNames.length > 0 ? homeroomNames.join(" · ") : null;
+    roomShortLabel = `${selectedGrade.name_short}/${selectedClassroom.room_number}`;
+  }
 
   const grades: GradeOption[] = sortedGrades.map((g) => ({
     id: g.id,
     label: g.name_short,
   }));
-  const rooms: RoomOption[] = roomsInGrade.map((r) => ({
-    id: r.id,
-    label: `${selectedGrade.name_short}/${r.room_number}`,
-  }));
+  const rooms: RoomOption[] = selectedGrade
+    ? roomsInGrade.map((r) => ({
+        id: r.id,
+        label: `${selectedGrade.name_short}/${r.room_number}`,
+      }))
+    : [];
 
   return (
     <>
@@ -180,22 +186,26 @@ export default async function CompetencyPage({ searchParams }: Props) {
         iconBg="bg-emerald-100 text-emerald-700"
         title="ประเมินตามหลักสูตร · สมรรถนะสำคัญ"
         description={
-          <>
-            ห้อง <strong>{roomShortLabel}</strong>
-            {term ? (
-              <>
-                {" "}· ภาคเรียนที่{" "}
-                <strong>
-                  {term.semester}/{currentYear.year_be}
-                </strong>
-              </>
-            ) : null}
-            {homeroomLabel ? (
-              <>
-                {" "}· ครูประจำชั้น <strong>{homeroomLabel}</strong>
-              </>
-            ) : null}
-          </>
+          selectedClassroom ? (
+            <>
+              ห้อง <strong>{roomShortLabel}</strong>
+              {term ? (
+                <>
+                  {" "}· ภาคเรียนที่{" "}
+                  <strong>
+                    {term.semester}/{currentYear.year_be}
+                  </strong>
+                </>
+              ) : null}
+              {homeroomLabel ? (
+                <>
+                  {" "}· ครูประจำชั้น <strong>{homeroomLabel}</strong>
+                </>
+              ) : null}
+            </>
+          ) : (
+            "เลือกระดับชั้นและห้องเพื่อเริ่มประเมิน"
+          )
         }
       />
 
@@ -203,9 +213,9 @@ export default async function CompetencyPage({ searchParams }: Props) {
         <Card padding="sm" className="mb-4">
           <CompetencySelector
             grades={grades}
-            selectedGradeId={selectedGrade.id}
+            selectedGradeId={selectedGrade?.id ?? ""}
             rooms={rooms}
-            selectedRoomId={selectedClassroom.id}
+            selectedRoomId={selectedClassroom?.id ?? ""}
           />
         </Card>
 
@@ -218,21 +228,31 @@ export default async function CompetencyPage({ searchParams }: Props) {
             </Card>
           }
         >
-          <Suspense
-            key={`${selectedClassroom.id}-${term?.semester ?? 1}`}
-            fallback={
-              <Card padding={false} className="overflow-hidden">
-                <div className="p-16 text-center text-sm text-zinc-400">
-                  กำลังโหลดข้อมูล…
-                </div>
-              </Card>
-            }
-          >
-            <GridSection
-              classroomId={selectedClassroom.id}
-              yearId={currentYear.id}
-            />
-          </Suspense>
+          {!selectedGrade ? (
+            <Card variant="dashed" className="p-12 text-center">
+              <p className="text-sm text-zinc-500">เลือกระดับชั้นก่อน</p>
+            </Card>
+          ) : !selectedClassroom ? (
+            <Card variant="dashed" className="p-12 text-center">
+              <p className="text-sm text-zinc-500">เลือกห้องเรียนก่อน</p>
+            </Card>
+          ) : (
+            <Suspense
+              key={`${selectedClassroom.id}-${term?.semester ?? 1}`}
+              fallback={
+                <Card padding={false} className="overflow-hidden">
+                  <div className="p-16 text-center text-sm text-zinc-400">
+                    กำลังโหลดข้อมูล…
+                  </div>
+                </Card>
+              }
+            >
+              <GridSection
+                classroomId={selectedClassroom.id}
+                yearId={currentYear.id}
+              />
+            </Suspense>
+          )}
         </FilterNavGate>
       </FilterNavProvider>
     </>
