@@ -168,12 +168,17 @@ export default async function AttendancePage({ searchParams }: Props) {
         .filter((c) => c.grade_level_id === selectedGrade.id)
         .sort((a, b) => a.room_number - b.room_number)
     : [];
+  // Single-room grade → auto-pick; multi-room → null until chosen.
+  // User spec 2026-05-31 (revised): "ห้องเดียวไม่ต้องเลือก · หลายห้องแสดง
+  // dropdown รอ".
   const selectedClassroom = params.room
     ? (roomsInGrade.find((r) => r.id === params.room) ?? null)
-    : null;
+    : roomsInGrade.length === 1
+      ? roomsInGrade[0]
+      : null;
 
-  // Nothing chosen yet → show just the selector + a prompt, skipping the
-  // term/month tab logic and the grid entirely.
+  // Grade not picked, or a multi-room grade with no room chosen yet → show
+  // just the selector + a prompt, skipping the term/month tab logic + grid.
   if (!selectedGrade || !selectedClassroom) {
     return (
       <>

@@ -144,11 +144,16 @@ export default async function ReadingThinkingPage({ searchParams }: Props) {
         .filter((c) => c.grade_level_id === selectedGrade.id)
         .sort((a, b) => a.room_number - b.room_number)
     : [];
+  // Single-room grade → auto-pick (one option, no need to choose).
+  // Multi-room → null until the admin picks. User spec 2026-05-31 (revised):
+  // "ห้องเดียวไม่ต้องเลือก · หลายห้องแสดง dropdown รอ".
   const selectedClassroom = params.room
     ? (roomsInGrade.find((r) => r.id === params.room) ?? null)
-    : null;
+    : roomsInGrade.length === 1
+      ? roomsInGrade[0]
+      : null;
 
-  // Homeroom teachers + room label — only once a room is chosen.
+  // Homeroom teachers + room label — only once a room is resolved.
   let homeroomLabel: string | null = null;
   let roomShortLabel = "";
   if (selectedGrade && selectedClassroom) {
@@ -165,8 +170,10 @@ export default async function ReadingThinkingPage({ searchParams }: Props) {
         (h) => `${h.teacher!.user!.title ?? ""}${h.teacher!.user!.full_name}`,
       );
     homeroomLabel = homeroomNames.length > 0 ? homeroomNames.join(" · ") : null;
-    // Room was explicitly picked, so always show ป.X/Y.
-    roomShortLabel = `${selectedGrade.name_short}/${selectedClassroom.room_number}`;
+    roomShortLabel =
+      roomsInGrade.length > 1
+        ? `${selectedGrade.name_short}/${selectedClassroom.room_number}`
+        : selectedGrade.name_short;
   }
 
   const grades: GradeOption[] = sortedGrades.map((g) => ({

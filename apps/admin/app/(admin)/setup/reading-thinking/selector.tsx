@@ -50,9 +50,9 @@ export function ReadingThinkingSelector({
         </Select>
       </div>
 
-      {/* Room dropdown appears once a grade is picked. Shown even for a
-          single-room grade — user spec 2026-05-31: "เลือกห้องทุกครั้ง". */}
-      {selectedGradeId && (
+      {/* Room dropdown only when the grade has 2+ rooms — single-room grades
+          auto-select server-side (user spec 2026-05-31, revised). */}
+      {selectedGradeId && rooms.length > 1 && (
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-zinc-700">เลือกห้อง:</label>
           <Select
