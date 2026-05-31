@@ -3871,9 +3871,40 @@ Schema update:
 - ~20% (debug ลึก Next 16 quirks / z-index / transition timing / architecture) → Opus เด่นกว่า
 - แนะนำ: Sonnet เป็นหลัก + Opus ตอนติด · กุญแจ = ทีละ step + type-check ทุกครั้ง
 
+### 🐞 ค้าง: PDF ชื่อยังไม่เปลี่ยน (debug พรุ่งนี้)
+User รายงาน: Save-as-PDF ชื่อยังเป็น "ระบบบันทึกผลการเรียนออนไลน์" (constant)
+แม้ commit `5441f6a`/`b592a9b` deploy แล้ว · generateMetadata embed logic
+ดูถูก (type-check ผ่าน) แต่ filename ยัง constant
+
+**ข้อสันนิษฐาน (เรียงตามความน่าจะ):**
+1. **browser ใช้ parent (top) document.title ตอน print iframe** — ไม่ใช่
+   iframe.contentDocument.title · `iframe.contentWindow.print()` อาจให้
+   filename = หน้า admin (parent) = constant แทน iframe (report) title
+   → **น่าจะข้อนี้** (logic generateMetadata ถูก แต่ browser ไม่ใช้ iframe title)
+2. generateMetadata ไม่ override root constant ใน iframe context (ไม่น่า)
+3. report client-side ไม่ได้ set title (ไม่มี client override)
+
+**Debug plan:**
+1. เปิด report embed ตรงๆ: `/reports/pp5-class?classroom=<id>&embed=1`
+   → ดู browser TAB title
+   - ถ้า tab = "ปพ.5 รวมชั้น ภาคเรียนที่..." → generateMetadata ทำงาน →
+     ปัญหาคือ **print ใช้ parent title** (ข้อ 1) → แก้ที่ handlePrint
+   - ถ้า tab = constant → generateMetadata ไม่ทำงาน (debug metadata)
+2. ถ้าข้อ 1: แก้ DirectPrintButton + selector handlePrint ให้ set
+   `document.title` (parent) = ชื่อรายงาน ชั่วคราวก่อน `iframe.print()`
+   แล้ว restore หลัง print (ต้องส่งชื่อรายงานเข้า DirectPrintButton/
+   selector form เป็น prop)
+   - DirectPrintButton: เพิ่ม prop `downloadName?: string` → onPrint set
+     document.title = downloadName · finally restore
+   - pp5/pp5-class selector handlePrint: set document.title ก่อน win.print()
+   - currentTermSuffix() ต้องเรียกฝั่ง server (page) ส่งชื่อเต็มเป็น prop
+     (client print button ไม่มี DB access)
+
 ### 🛑 หยุดพัก
-- **ครั้งหน้า**: ทำต่อ 3 หน้าวิชา (by-subject/score-structure/activities) ด้วย pattern ข้อ 8
-- commit ล่าสุด: `c36a8a5` · pushed
+- **ครั้งหน้า**:
+  1. Debug PDF filename (plan ข้างบน) — น่าจะแก้ที่ print button (parent title)
+  2. ทำต่อ 3 หน้าวิชา (by-subject/score-structure/activities) ด้วย pattern ข้อ 8
+- commit ล่าสุด: `596dd35` · pushed
 
 
 
