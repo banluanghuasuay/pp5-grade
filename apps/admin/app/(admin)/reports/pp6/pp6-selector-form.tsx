@@ -13,11 +13,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 //   d. นักเรียน dropdown — only when รายบุคคล
 //   e. ช่วงเวลา — PRIMARY only: ภาคเรียนที่ 1 | 2 | สรุปทั้งปี (→ semester
 //      = 1 | 2 | annual). Secondary hides this (always current semester).
-//   f. เรียงตามเลขที่ — checkbox (sort=1 default on)
+//   f. แสดงอันดับ (เรียงตามเกรดเฉลี่ย) — checkbox (rank=1 default on).
+//      ON → students ordered by GPA desc + "ได้อันดับที่ N" suffix shown.
+//      OFF → order by เลขที่, suffix omitted.
 //
 // URL built:
 //   /reports/pp6?classroom=<roomId>&semester=<1|2|annual>
-//     &scope=<all|individual>[&student=<id>]&sort=<1|0>&embed=1
+//     &scope=<all|individual>[&student=<id>]&rank=<1|0>&embed=1
 // ===================================================================
 
 export type StudentOption = {
@@ -106,8 +108,10 @@ export function Pp6SelectorForm({ classrooms }: Props) {
   // URL stays clean (server overrides anyway).
   const [semester, setSemester] = useState<Semester>("1");
 
-  // ───────── เรียงตามเลขที่ ─────────
-  const [sortByNumber, setSortByNumber] = useState(true);
+  // ───────── แสดงอันดับ (เรียงตามเกรดเฉลี่ย) ─────────
+  // Default ON → students ordered by GPA desc + อันดับ suffix shown. OFF →
+  // order by เลขที่ and hide the อันดับ suffix.
+  const [showRank, setShowRank] = useState(true);
 
   // A selection is print-ready once a room is chosen, and — in รายบุคคล
   // mode — a student too.
@@ -122,7 +126,7 @@ export function Pp6SelectorForm({ classrooms }: Props) {
       `&semester=${effectiveSemester}` +
       `&scope=${scope}` +
       (scope === "individual" ? `&student=${studentId}` : "") +
-      `&sort=${sortByNumber ? "1" : "0"}` +
+      `&rank=${showRank ? "1" : "0"}` +
       `&embed=1`
     : null;
 
@@ -348,17 +352,17 @@ export function Pp6SelectorForm({ classrooms }: Props) {
                 </div>
               )}
 
-              {/* f. เรียงตามเลขที่. */}
+              {/* f. แสดงอันดับ (เรียงตามเกรดเฉลี่ย). */}
               <div className="grid grid-cols-[80px_1fr] items-center gap-2">
-                <span className="text-sm text-zinc-700">เรียง</span>
+                <span className="text-sm text-zinc-700">อันดับ</span>
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-800">
                   <input
                     type="checkbox"
-                    checked={sortByNumber}
-                    onChange={(e) => setSortByNumber(e.target.checked)}
+                    checked={showRank}
+                    onChange={(e) => setShowRank(e.target.checked)}
                     className="size-4"
                   />
-                  เรียงตามเลขที่
+                  แสดงอันดับ (เรียงตามเกรดเฉลี่ย)
                 </label>
               </div>
 

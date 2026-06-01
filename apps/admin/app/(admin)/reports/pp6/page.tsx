@@ -60,9 +60,10 @@ type Props = {
     /** "all" | "individual". `student` presence is what actually decides
      *  single vs. all; this is passed through for URL clarity. */
     scope?: string;
-    /** "1" (default) → order students by เลขที่ (student_number). "0" →
-     *  keep the enrollment's natural order. */
-    sort?: string;
+    /** "1" (default) → order rendered students by GPA descending and show
+     *  the "ได้อันดับที่ N ของห้อง" suffix. "0" → order by เลขที่
+     *  (student_number) and omit the อันดับ suffix. */
+    rank?: string;
     /** "1" → rendered inside the selector's preview iframe. Otherwise the
      *  page renders the <Pp6SelectorForm> instead of the report. */
     embed?: string;
@@ -130,8 +131,10 @@ export default async function Pp6Page({ searchParams }: Props) {
   const scopeMode = params.scope?.trim() === "all" ? "all" : "individual";
   const onlyStudentId =
     scopeMode === "all" ? null : params.student?.trim() || null;
-  // เรียงตามเลขที่ — default ON. Only "0" turns it off (natural order).
-  const sortByNumber = params.sort?.trim() !== "0";
+  // แสดงอันดับ — default ON. Only "0" turns it off.
+  //   ON  → render students GPA-descending + show "ได้อันดับที่ N ของห้อง".
+  //   OFF → render students by เลขที่ (student_number) + omit the suffix.
+  const showRank = params.rank?.trim() !== "0";
 
   const scopeRaw = params.semester?.trim();
   const scope: ScopeParam =
@@ -193,10 +196,8 @@ export default async function Pp6Page({ searchParams }: Props) {
   //    the current term. One page per enrolled student (unless `student`
   //    narrows to one).
   const enrollmentSemester: 0 | 1 | 2 = isPrimary ? 0 : secondarySemester;
-  // เรียงตามเลขที่ (sort=1, default) → order by student_number; otherwise
-  // keep the natural insertion order (sort=0). The `ascending` flag stays
-  // true either way — only the column changes.
-  const orderColumn = sortByNumber ? "student_number" : "created_at";
+  // Always fetch by student_number ascending — this is the rank=0 render
+  // order, and a deterministic base when rank=1 re-sorts by GPA below.
   const { data: enrolls } = await supabase
     .from("enrollments")
     .select(
@@ -207,7 +208,7 @@ export default async function Pp6Page({ searchParams }: Props) {
     )
     .eq("classroom_id", classroomId)
     .eq("semester", enrollmentSemester)
-    .order(orderColumn);
+    .order("student_number");
 
   const allStudents = (enrolls ?? [])
     .filter((e) => e.student)
@@ -690,13 +691,19 @@ export default async function Pp6Page({ searchParams }: Props) {
     return gpaDesc.length;
   };
 
-  // 12. Choose which students to render.
-  const rendered = onlyStudentId
+  // 12. Choose which students to render. `computed` is in เลขที่ order
+  //     (the rank=0 render order). When rank is ON, re-sort the rendered
+  //     list by GPA descending (ties keep their เลขที่ order via a stable
+  //     sort). The per-student `rankOf` value is independent of this order.
+  const base = onlyStudentId
     ? computed.filter((c) => c.id === onlyStudentId)
     : computed;
-  if (onlyStudentId && rendered.length === 0) {
+  if (onlyStudentId && base.length === 0) {
     notFound();
   }
+  const rendered = showRank
+    ? [...base].sort((a, b) => b.gpa - a.gpa)
+    : base;
 
   // HeaderInfo — Pp5Frame only reads `embed`, but the type requires a full
   // object. Populate the fields ปพ.6 actually uses; empties for the rest.
@@ -739,6 +746,7 @@ export default async function Pp6Page({ searchParams }: Props) {
           student={stu}
           isPrimary={isPrimary}
           rank={rankOf(stu.gpa)}
+          showRank={showRank}
           numericSubjects={numericSubjects}
           activitySubjects={activitySubjects}
           activityResultFor={(act) => activityResultFor(act, stu.id)}
@@ -773,6 +781,7 @@ function Pp6StudentPage({
   student,
   isPrimary,
   rank,
+  showRank,
   numericSubjects,
   activitySubjects,
   activityResultFor,
@@ -804,6 +813,8 @@ function Pp6StudentPage({
   };
   isPrimary: boolean;
   rank: number;
+  /** When false (rank=0), omit the "ได้อันดับที่ N ของห้อง" GPA suffix. */
+  showRank: boolean;
   numericSubjects: NumericSubject[];
   activitySubjects: ActivitySubject[];
   activityResultFor: (act: ActivitySubject) => "pass" | "fail" | null;
@@ -819,7 +830,10 @@ function Pp6StudentPage({
   directorTitle: string;
 }) {
   const totalWeight = student.coreWeight + student.additionalWeight;
-  const totalHours = student.coreHours + student.additionalHours;
+  // PRIMARY total INCLUDES activity hours (core + additional + activity);
+  // SECONDARY total is credit-weight only (no activity row).
+  const totalHours =
+    student.coreHours + student.additionalHours + student.activityHours;
   const activityOverall =
     student.activityResult === "pass"
       ? "ผ่าน"
@@ -1022,10 +1036,8 @@ function Pp6StudentPage({
                 <td>{additionalLabel}</td>
                 <td className="pp6-summary-val">{additionalValue}</td>
               </tr>
-              <tr>
-                <td>{totalLabel}</td>
-                <td className="pp6-summary-val">{totalValue}</td>
-              </tr>
+              {/* PRIMARY activity-hours row comes BEFORE the total row, and
+                  the total (totalValue) already folds these hours in. */}
               {isPrimary && (
                 <tr>
                   <td>เวลาเรียนวิชากิจกรรมพัฒนาผู้เรียนที่ได้</td>
@@ -1035,21 +1047,25 @@ function Pp6StudentPage({
                 </tr>
               )}
               <tr>
-                <td>ผลการประเมินคุณลักษณะอันพึงประสงค์</td>
+                <td>{totalLabel}</td>
+                <td className="pp6-summary-val">{totalValue}</td>
+              </tr>
+              <tr>
+                <td>คุณลักษณะอันพึงประสงค์</td>
                 <td className="pp6-summary-val">{student.charSummary}</td>
               </tr>
               <tr>
-                <td>ผลการประเมินการอ่าน คิด วิเคราะห์และเขียน</td>
+                <td>การอ่าน คิด วิเคราะห์และเขียน</td>
                 <td className="pp6-summary-val">{student.readingSummary}</td>
               </tr>
               <tr>
-                <td>ผลการประเมินกิจกรรมพัฒนาผู้เรียน</td>
+                <td>กิจกรรมพัฒนาผู้เรียน</td>
                 <td className="pp6-summary-val">{activityOverall}</td>
               </tr>
               <tr>
                 <td colSpan={2} className="pp6-summary-gpa">
-                  ผลการเรียนเฉลี่ย (GPA) {student.gpa.toFixed(2)} ได้อันดับที่{" "}
-                  {rank} ของห้อง
+                  ผลการเรียนเฉลี่ย (GPA) {student.gpa.toFixed(2)}
+                  {showRank ? ` ได้อันดับที่ ${rank} ของห้อง` : ""}
                 </td>
               </tr>
             </tbody>
