@@ -130,25 +130,26 @@ export function Pp6SelectorForm({ classrooms }: Props) {
       `&embed=1`
     : null;
 
-  // Debounce iframe src updates so rapid control changes don't trigger N
-  // reloads — wait 250ms after the last change.
-  const [iframeSrc, setIframeSrc] = useState<string | null>(previewSrc);
+  // The preview is NOT auto-loaded. iframeSrc holds the last GENERATED report
+  // URL (set when the admin clicks "สร้างรายงาน"); it resets to null whenever
+  // a selection changes, so a stale preview doesn't linger after the inputs
+  // change — the admin re-clicks "สร้างรายงาน" to rebuild.
+  const [iframeSrc, setIframeSrc] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   useEffect(() => {
-    if (previewSrc === iframeSrc) return;
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIframeSrc(previewSrc);
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [previewSrc, iframeSrc]);
+    setIframeSrc(null);
+  }, [previewSrc]);
 
   // Narrow-screen tab switcher (CSS container query flips to single column).
   const [tabView, setTabView] = useState<"config" | "preview">("config");
-  useEffect(() => {
-    if (canPreview) setTabView("preview");
-    else setTabView("config");
-  }, [canPreview]);
+
+  // Build the preview only on demand — admin clicks "สร้างรายงาน".
+  const handleGenerate = () => {
+    if (!previewSrc) return;
+    setIsLoading(true);
+    setIframeSrc(previewSrc);
+    setTabView("preview");
+  };
 
   // Preview zoom + auto-fit (same machinery as pp5-class).
   const previewFrameRef = useRef<HTMLDivElement>(null);
@@ -366,10 +367,14 @@ export function Pp6SelectorForm({ classrooms }: Props) {
                 </label>
               </div>
 
-              <p className="text-xs text-zinc-500">
-                ปพ.6 — แบบรายงานผลการพัฒนาคุณภาพผู้เรียนรายบุคคล · 1
-                นักเรียน = 1 หน้า
-              </p>
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={!canPreview}
+                className="mt-1 inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                สร้างรายงาน
+              </button>
             </div>
           </div>
         </aside>
@@ -387,7 +392,7 @@ export function Pp6SelectorForm({ classrooms }: Props) {
                   const v = e.target.value;
                   setZoomMode(v === "fit" ? null : Number(v));
                 }}
-                disabled={!canPreview}
+                disabled={!iframeSrc}
                 className="pp5-zoom-select"
               >
                 <option value="fit">พอดี ({Math.round(fitScale * 100)}%)</option>
@@ -406,7 +411,7 @@ export function Pp6SelectorForm({ classrooms }: Props) {
               onClick={handlePrint}
               // Disabled while loading too — printing before the preview
               // finishes can output an incomplete/stale page.
-              disabled={!canPreview || isLoading}
+              disabled={!iframeSrc || isLoading}
               className="inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Printer className="size-4" aria-hidden />
@@ -470,7 +475,7 @@ export function Pp6SelectorForm({ classrooms }: Props) {
                           ? "เลือกห้องก่อน"
                           : scope === "individual" && !studentId
                             ? "เลือกนักเรียนก่อน"
-                            : "ยังไม่พร้อม"}
+                            : "กดปุ่ม “สร้างรายงาน” เพื่อแสดงพรีวิว"}
                   </p>
                   <p className="mt-1 text-xs text-zinc-500">
                     {classrooms.length === 0
