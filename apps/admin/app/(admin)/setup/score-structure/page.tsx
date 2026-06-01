@@ -518,7 +518,11 @@ function Pp5PrintLink({
   subjectId: string;
   semester: 1 | 2;
 }) {
-  const url = `/reports/pp5?classroom=${classroomId}&subject=${subjectId}&semester=${semester}&parts=scores`;
+  // `embed=1` is REQUIRED: it (a) renders the report bare-bones without admin
+  // chrome and (b) unlocks pp5's generateMetadata (which returns {} when
+  // embed !== "1") so the print-saved PDF filename gets the dynamic report
+  // title instead of the constant browser-tab default.
+  const url = `/reports/pp5?classroom=${classroomId}&subject=${subjectId}&semester=${semester}&parts=scores&embed=1`;
   return <DirectPrintButton url={url} title="พิมพ์รายงาน" />;
 }
 
