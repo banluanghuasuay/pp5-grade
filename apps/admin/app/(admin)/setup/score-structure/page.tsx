@@ -503,11 +503,11 @@ function TableLoadingCard() {
  * "พิมพ์รายงาน" button — loads the ปพ.5 report page inside a hidden iframe
  * and triggers the browser's native print dialog directly (no preview page).
  *
- * The URL passes `parts=scores` so the report renders the original Phase 3
- * "simple" version: title header + score table + signature footer (NO
- * cover page, NO weekly grid, NO eval sections). The comprehensive ปพ.5
- * bundle is still available via the dedicated "พิมพ์เล่มรายงาน" menu
- * which loads `/reports/pp5` without a `parts` filter (= show everything).
+ * Loads the standalone /reports/score-table route (decoupled from the ปพ.5
+ * เล่ม) which renders title header + score table + signature footer — same
+ * output as the old pp5?parts=scores, but its own route + "บันทึกคะแนน"
+ * filename. The comprehensive ปพ.5 bundle is still available via the
+ * dedicated "พิมพ์เล่มรายงาน" menu which loads `/reports/pp5`.
  */
 function Pp5PrintLink({
   classroomId,
@@ -518,11 +518,11 @@ function Pp5PrintLink({
   subjectId: string;
   semester: 1 | 2;
 }) {
-  // `embed=1` is REQUIRED: it (a) renders the report bare-bones without admin
-  // chrome and (b) unlocks pp5's generateMetadata (which returns {} when
-  // embed !== "1") so the print-saved PDF filename gets the dynamic report
-  // title instead of the constant browser-tab default.
-  const url = `/reports/pp5?classroom=${classroomId}&subject=${subjectId}&semester=${semester}&parts=scores&embed=1`;
+  // Points at the standalone /reports/score-table route (NOT pp5?parts=scores)
+  // so the score-only print is fully decoupled from the ปพ.5 เล่ม and gets its
+  // own "บันทึกคะแนน" filename. `embed=1` renders it bare-bones (no admin
+  // chrome) and unlocks its generateMetadata (returns {} unless embed=1).
+  const url = `/reports/score-table?classroom=${classroomId}&subject=${subjectId}&semester=${semester}&embed=1`;
   return <DirectPrintButton url={url} title="พิมพ์รายงาน" />;
 }
 

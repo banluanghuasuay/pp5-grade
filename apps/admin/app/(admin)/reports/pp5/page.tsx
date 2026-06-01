@@ -22,14 +22,9 @@ export async function generateMetadata({
     currentTermSuffix(),
     reportClassroomLabel(p.classroom),
   ]);
-  // The same /reports/pp5 route serves two jobs: the full ปพ.5 เล่ม (no
-  // `parts` filter, or several parts) and the score-only print launched from
-  // หน้าบันทึกคะแนน (`parts=scores`). Name the saved PDF to match the job so
-  // the score print isn't mistaken for the full ปพ.5 form — its on-paper
-  // header is "แบบบันทึกผลการเรียนประจำรายวิชา", and the user picked
-  // "บันทึกคะแนน" as the filename.
-  const name = p.parts === "scores" ? "บันทึกคะแนน" : "ปพ.5 รายวิชา";
-  return { title: [name, room, suffix].filter(Boolean).join(" ") };
+  // Score-only print now has its OWN /reports/score-table route, so this pp5
+  // route only ever serves the full ปพ.5 เล่ม — always "ปพ.5 รายวิชา".
+  return { title: ["ปพ.5 รายวิชา", room, suffix].filter(Boolean).join(" ") };
 }
 
 type Props = {
