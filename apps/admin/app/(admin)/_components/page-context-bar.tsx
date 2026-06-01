@@ -21,7 +21,13 @@ export function PageContextBar({ term }: { term: CurrentTerm | null }) {
   return (
     <div className="no-print flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 bg-white px-6 py-2 sm:px-8">
       <Breadcrumb />
-      <TermBadge term={term} className="hidden md:inline-flex" />
+      {/* Desktop only — on mobile the badge lives in MobileHeader. Wrap in a
+          div so visibility doesn't hinge on cn() merging display utilities:
+          cn() has no tailwind-merge, so "inline-flex" (TermBadge's base) +
+          "hidden" would both land on the element and collide. */}
+      <div className="hidden md:flex">
+        <TermBadge term={term} />
+      </div>
     </div>
   );
 }
