@@ -833,14 +833,26 @@ function Pp6StudentPage({
           </tr>
         </thead>
         <tbody>
-          {numericSubjects.length === 0 ? (
-            <tr>
-              <td colSpan={7} className="pp6-empty">
-                — ไม่มีรายวิชา —
-              </td>
-            </tr>
-          ) : (
-            numericSubjects.map((subj, i) => {
+          {/* Always show at least 15 numbered rows so every ปพ.6 page has the
+              same height; pad blank rows when a class has < 15 subjects, and
+              show all of them when it has more. */}
+          {Array.from(
+            { length: Math.max(15, numericSubjects.length) },
+            (_, i) => {
+              const subj = numericSubjects[i];
+              if (!subj) {
+                return (
+                  <tr key={`np-${i}`}>
+                    <td>{i + 1}</td>
+                    <td></td>
+                    <td className="pp6-cell-name"></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                );
+              }
               const res = student.numeric.get(subj.id) ?? {
                 total: 0,
                 grade: 0,
@@ -858,7 +870,7 @@ function Pp6StudentPage({
                   <td>{fmtGradeLevel(res.grade)}</td>
                 </tr>
               );
-            })
+            },
           )}
         </tbody>
       </table>
@@ -883,14 +895,23 @@ function Pp6StudentPage({
           </tr>
         </thead>
         <tbody>
-          {activitySubjects.length === 0 ? (
-            <tr>
-              <td colSpan={5} className="pp6-empty">
-                — ไม่มีกิจกรรม —
-              </td>
-            </tr>
-          ) : (
-            activitySubjects.map((act, i) => {
+          {/* Pad to at least 4 numbered rows for a consistent layout; show
+              all when a class has more than 4 activities. */}
+          {Array.from(
+            { length: Math.max(4, activitySubjects.length) },
+            (_, i) => {
+              const act = activitySubjects[i];
+              if (!act) {
+                return (
+                  <tr key={`ap-${i}`}>
+                    <td>{i + 1}</td>
+                    <td></td>
+                    <td className="pp6-cell-name"></td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                );
+              }
               const r = activityResultFor(act);
               return (
                 <tr key={act.id}>
@@ -903,7 +924,7 @@ function Pp6StudentPage({
                   </td>
                 </tr>
               );
-            })
+            },
           )}
         </tbody>
       </table>
