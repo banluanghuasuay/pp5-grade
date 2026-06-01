@@ -28,6 +28,12 @@ export function InstallButton({ collapsed }: { collapsed: boolean }) {
   );
 
   useEffect(() => {
+    // Register the service worker — Chrome requires a SW with a fetch handler
+    // before it fires beforeinstallprompt (installability criteria).
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+
     // Already running as an installed app → never offer to install.
     if (window.matchMedia("(display-mode: standalone)").matches) return;
 
