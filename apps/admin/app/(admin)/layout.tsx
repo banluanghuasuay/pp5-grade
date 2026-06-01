@@ -1,5 +1,6 @@
 import { createClient } from "@pp5/database/server";
 import { getCurrentUser } from "@pp5/database/queries";
+import { getCurrentTerm } from "@/lib/current-term";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { logoutAction } from "../_actions/auth";
@@ -45,6 +46,11 @@ export default async function AppLayout({
     .maybeSingle();
   const schoolLogoUrl = school?.logo_url ?? null;
 
+  // Current term — fetched once here, then passed to BOTH the mobile header
+  // (badge in place of the old logout button) and the page context bar
+  // (desktop). Avoids a duplicate getCurrentTerm query.
+  const term = await getCurrentTerm();
+
   const isAdmin = auth.profile.role === "admin";
   const roleLabel = ROLE_LABEL[auth.profile.role] ?? auth.profile.role;
   const userLabel = `${auth.profile.title ?? ""}${auth.profile.full_name} · ${roleLabel}`;
@@ -65,11 +71,11 @@ export default async function AppLayout({
             schoolLogoUrl={schoolLogoUrl}
           />
 
-          <MobileHeader userLabel={userLabel} logoutAction={logoutAction} />
+          <MobileHeader userLabel={userLabel} term={term} />
 
           <main className="flex-1 overflow-x-hidden">
             {/* Phase 2.6 — top context strip on every page (breadcrumb + term) */}
-            <PageContextBar />
+            <PageContextBar term={term} />
             <div className="mx-auto max-w-6xl p-6 sm:p-8">
               {/* Skeleton overlay during cross-page menu navigation, so the
                   stale page doesn't sit frozen while the new route streams

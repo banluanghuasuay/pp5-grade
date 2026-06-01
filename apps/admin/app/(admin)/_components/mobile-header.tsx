@@ -1,23 +1,26 @@
 "use client";
 
-import { LogOut, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
+import type { CurrentTerm } from "@/lib/current-term";
 import { useMobileNav } from "./mobile-nav-context";
+import { TermBadge } from "./term-badge";
 
 /**
  * Compact top bar shown only on mobile (`md:hidden`).
  * Desktop uses the Sidebar instead.
  *
- * Includes a hamburger button (left) that opens the sidebar as a
- * slide-in drawer — without it the menu would be unreachable on
- * mobile (the sidebar uses `hidden md:flex`). User spec 2026-05-22:
- * "เมื่อย่อแล้วเมนูหาย หาที่กดไม่ได้".
+ * Left  → hamburger (opens the sidebar drawer — that's where logout now
+ *         lives) + brand + user label.
+ * Right → current-term badge (replaces the old logout button — user spec
+ *         2026-06-01: on mobile, logout moves into the drawer and the green
+ *         term badge takes its place here).
  */
 export function MobileHeader({
   userLabel,
-  logoutAction,
+  term,
 }: {
   userLabel: string;
-  logoutAction: () => Promise<void>;
+  term: CurrentTerm | null;
 }) {
   const { setOpen } = useMobileNav();
   return (
@@ -38,16 +41,7 @@ export function MobileHeader({
           <p className="truncate text-xs text-zinc-500">{userLabel}</p>
         </div>
       </div>
-      <form action={logoutAction}>
-        <button
-          type="submit"
-          aria-label="ออกจากระบบ"
-          className="flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          ออกจากระบบ
-        </button>
-      </form>
+      <TermBadge term={term} className="shrink-0" />
     </header>
   );
 }
