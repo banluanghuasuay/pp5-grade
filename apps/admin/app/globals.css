@@ -824,7 +824,7 @@
   page-break-inside: avoid;
 }
 .pp6-summary-left {
-  flex: 1 1 60%;
+  flex: 1 1 48%;
   font-size: 14px;
   line-height: 1.85;
   color: #000;
@@ -836,7 +836,7 @@
   font-weight: 700;
 }
 .pp6-summary-right {
-  flex: 1 1 40%;
+  flex: 1 1 52%;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;

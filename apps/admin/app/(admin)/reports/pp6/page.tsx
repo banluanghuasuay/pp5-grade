@@ -235,9 +235,9 @@ export default async function Pp6Page({ searchParams }: Props) {
     .order("role");
   const homeroomNames = (homerooms ?? [])
     .filter((h) => h.teacher?.user)
-    // No title prefix on the signature line — "นาย/นาง…" makes the name wrap
-    // to a 2nd line in the tight signature cell, especially with 2 teachers.
-    .map((h) => h.teacher!.user!.full_name);
+    // Prefix "ครู" — shorter than นาย/นาง, so the name stays on one line in
+    // the tight signature cell even with 2 teachers.
+    .map((h) => `ครู${h.teacher!.user!.full_name}`);
   const homeroomLabel =
     homeroomNames.length > 0 ? homeroomNames.join(" · ") : null;
 
