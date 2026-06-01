@@ -36,6 +36,7 @@ import {
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { InstallButton } from "./install-button";
 import { useMobileNav } from "./mobile-nav-context";
 import { useNavigationStatus } from "./navigation-status-context";
 
@@ -522,6 +523,7 @@ export function Sidebar({ isAdmin, user, logoutAction, schoolLogoUrl }: Props) {
             </p>
           </div>
         )}
+        <InstallButton collapsed={collapsed} />
         <form action={logoutAction}>
           <button
             type="submit"
