@@ -4078,5 +4078,60 @@ apps/admin/app/(admin)/layout.tsx · proxy.ts
 `a043093` favicon · `f3ea6e3` manifest+ปุ่ม · `6ab8273` sw · `ad31e2f` proxy exclude ·
 `f766b8f` mobile header · `381aaae` badge dup fix · `db0a464` favicon.ico EasyGrade
 
+---
+
+## ✅ Reports polish: characteristics + attendance header + ปพ.5 รายวิชา ประถม — เสร็จ (2026-06-01 ต่อ)
+
+ต่อจาก branding · ลุยงานค้าง + คำขอใหม่ · ทุก commit ขึ้น production + verify ด้วย Chrome MCP
+
+### A. characteristics TabNav — RSC function error
+TabNav (local ใน page server) ส่ง `label: (isActive)=>JSX` (render-prop) → OptimisticTabs (client) ·
+Next 16 บล็อก "Functions cannot be passed to Client Components" · แก้: extract → `characteristics/tab-nav.tsx`
+("use client") · page ส่งแค่ props ธรรมดา · `c4eda8c`
+
+### B. attendance report header (รายวัน + รายวิชา)
+- 3 บรรทัด (หัวข้อ+โรงเรียน+สังกัด) จัดกลางเป็น **flex group** · โลโก้อยู่ซ้ายชิดข้อความ (gap 0.6rem) · margin ชิด
+- scope `.att-page` + `.att-title-text` wrapper · **gotcha**: cn() ไม่มี tailwind-merge → "inline-flex"+"hidden"
+  ชนกัน · ต้อง wrap `<div className="hidden md:flex">` (เจอตอนแก้ badge มือถือด้วย)
+- `0a1a52c` · `6db026a`
+
+### C. "โรงเรียนโรงเรียน" ซ้ำ — 10 จุด
+- name_th มี "โรงเรียน" อยู่แล้ว + component เติมซ้ำ → helper **`withSchoolPrefix(name)`** (`lib/school-name.ts`)
+- 10 จุด: pp5 (cover/director-sig/simple-header) · pp5-class (cover/monthly/summary) · grade-summary ·
+  student-eval · _shared/score-report (attendance/by-subject/pp6 fixed inline ก่อนหน้า) · `d46a7bd`
+
+### D. ปพ.5 รายวิชา ประถม — เวลาเรียน
+- **ปัญหา**: weeklyGrid + summary ใช้ `subject_attendance` (รายคาบ × หน่วยกิต = ระบบมัธยม) ·
+  `slotsPerWeek = credit_hours×2` · ประถม credit=0 → slotsPerWeek=0 → guard `return null` → section หาย
+- **แก้**: ประถม slotsPerWeek = `hours_per_year / 40` · เพิ่ม `hours_per_year` ใน subject fetch · `c98ed30`
+- **2 ภาค** (ประถมตัดเกรดรายปี): extract `buildOfferingAttendance(offeringId, sem)` · primary build
+  sem1+sem2 → render weeklyGrid+summary × 2 ("ภาคเรียนที่ N") · secondary คงเดิม · `ac77bde`
+- **สรุปทั้งปี**: merge sem1+sem2 counts → AttendanceSummarySection semester="annual" → "(สรุปทั้งปี)" ·
+  % จาก totalSlots รวม · `2849eed`
+
+### E. slot / preview / dropdown polish (ปพ.5 รายวิชา)
+- **slot uniform**: table-layout:fixed + width:auto ทำคาบ 1-9 แคบกว่า 10+ → pin min-width=max-width ทั้ง 4 tier · `9738479`
+- **preview = print**: base col widths กว้างกว่า print → 50-slot grid ล้น paper-box แต่ print fit ·
+  set base = print widths (slot 14 · num 18 · sum 24 · pct 44) · `9a49093`
+- **dense slots**: 5+ ช่อง/สัปดาห์ (50+ คอลัมน์) ล้นแม้ 14px → `att-table--dense-slots` (10px) เมื่อ slotsPerWeek≥5 · `7a4a4e5`
+- **dropdown width**: subject `<select>` (option ยาว) ดันเกิน aside → `w-full min-w-0` ทั้ง 3 selects (เท่าระดับชั้น) · `7a4a4e5`
+
+### Files
+```
+characteristics/tab-nav.tsx (ใหม่) · characteristics/page.tsx
+lib/school-name.ts (ใหม่)
+reports/{pp5,pp5-class,grade-summary,student-eval,_shared/score-report,attendance,attendance-by-subject}
+globals.css (.att-page header flex · .att-wk-slot min/max · base=print col widths · dense)
+```
+
+### Verify (Chrome MCP · production)
+- ปพ.5 ป.5 ภาษาไทย (5 slots): weeklyGrid 2 ภาค + summary 2 ภาค + (สรุปทั้งปี) · slot 11px uniform ·
+  table fit (secOverflow false) · cover "โรงเรียนบ้านโคกผักหอม" ไม่ซ้ำ
+- attendance header logo flush · dropdown รายวิชา = ระดับชั้น (ไม่มี scroll aside)
+
+### commit (2026-06-01 ต่อ)
+`c4eda8c` TabNav · `0a1a52c`+`6db026a` att header · `d46a7bd` โรงเรียนโรงเรียน · `c98ed30` ประถมเวลาเรียน ·
+`9738479` slot uniform · `ac77bde` 2 ภาค · `9a49093` preview=print · `7a4a4e5` dense+dropdown · `2849eed` สรุปทั้งปี
+
 
 
