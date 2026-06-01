@@ -432,7 +432,9 @@ export default async function AttendanceBySubjectReport({ searchParams }: Props)
                   )}
                   <h1>แบบบันทึกเวลาเรียนรายวิชา</h1>
                   <p className="pp5-school-name">
-                    โรงเรียน{school?.name_th ?? "—"}
+                    {school?.name_th?.startsWith("โรงเรียน")
+                      ? school.name_th
+                      : `โรงเรียน${school?.name_th ?? "—"}`}
                   </p>
                 </div>
                 <p className="pp5-meta-line">

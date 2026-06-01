@@ -188,22 +188,34 @@
        school name as the primary identifier.
    ============================================================ */
 .att-page .pp5-title {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 0.4rem 0.75rem;
+  /* Block layout (not flex) so the title lines stack and center as a group;
+     the logo is pulled OUT of the flow (absolute, left) so it sits in front
+     of the lines without shifting the centering. User spec 2026-06-01. */
+  display: block;
+  position: relative;
+  text-align: center;
+  min-height: 48px;
 }
 .att-page .pp5-header-logo {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
   margin: 0 !important;
-  width: 40px !important;
-  height: 40px !important;
-  max-width: 40px !important;
-  max-height: 40px !important;
+  width: 48px !important;
+  height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
 }
-.att-page .pp5-school-name,
+/* Tight line spacing between the centered title lines. */
+.att-page .pp5-title h1 {
+  margin: 0;
+}
+.att-page .pp5-school-name {
+  margin: 0.1rem 0 0;
+}
 .att-page .pp5-school-affiliation {
-  flex-basis: 100%;
+  margin: 0.1rem 0 0;
 }
 /* Override the global compact/xcompact rule that hides .pp5-school-name
    on score/eval reports — attendance pages always show the name. */

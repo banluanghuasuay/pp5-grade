@@ -425,7 +425,11 @@ function AttFrame({
             />
           )}
           <h1>แบบบันทึกเวลาเรียน {info.classLabel}</h1>
-          <p className="pp5-school-name">โรงเรียน{info.schoolName}</p>
+          <p className="pp5-school-name">
+            {info.schoolName.startsWith("โรงเรียน")
+              ? info.schoolName
+              : `โรงเรียน${info.schoolName}`}
+          </p>
           <p className="pp5-school-affiliation">สังกัด {info.affiliation}</p>
         </div>
 
@@ -603,7 +607,11 @@ async function SummaryReport({
           <h1>
             แบบสรุปเวลาเรียน {info.classLabel}
           </h1>
-          <p className="pp5-school-name">โรงเรียน{info.schoolName}</p>
+          <p className="pp5-school-name">
+            {info.schoolName.startsWith("โรงเรียน")
+              ? info.schoolName
+              : `โรงเรียน${info.schoolName}`}
+          </p>
           <p className="pp5-school-affiliation">สังกัด {info.affiliation}</p>
         </div>
 
