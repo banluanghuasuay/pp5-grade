@@ -3167,6 +3167,89 @@ JSX guards: `{!compact && info.logoUrl && <img...>}`, `{!compact && <footer>}`.
 2. รายวิชา / รหัสวิชา
 3. กลุ่มสาระการเรียนรู้
 4. สาระการเรียนรู้ (พื้นฐาน / เพิ่มเติม)
+
+---
+
+## ✅ Phase 3 ต่อ: ปพ.6 + score decouple + optimistic UI — เสร็จ (2026-06-01)
+
+เซสชันยาว · UX polish + ฟีเจอร์ใหม่ ปพ.6 · ทุก commit ขึ้น production แล้ว
+
+### A. แยกหน้าบันทึกคะแนนออกจาก ปพ.5 (composition principle)
+**หลักการ user:** "หน้าอื่นๆ = ส่วนประกอบ · พิมพ์รวมเล่ม = ตัวรวมส่วนต่างๆ"
+- เดิม: ปุ่มพิมพ์หน้า score-structure ชี้ `/reports/pp5?...&parts=scores` (coupled กับ ปพ.5)
+- ใหม่: route อิสระ `/reports/score-table` — PDF ชื่อไฟล์ "บันทึกคะแนน" (generateMetadata title)
+- ย้าย 10 components ที่ใช้ร่วม (HeaderInfo, Pp5Frame, NumericTable, PrimaryAnnualSummary,
+  PassFailTable, Pp5SimpleHeader, Pp5ScoreHeader, Pp5Footer, fmtScore, fmtGrade)
+  → `reports/_shared/score-report.tsx` (neutral · route + booklet import ทั้งคู่ · ไม่ depend กันเอง)
+- Bug fix: score PDF filename ค้างที่ "ระบบบันทึกผลการเรียนออนไลน์" — sem-tab print button
+  ลืม `&embed=1` → pp5 generateMetadata gate (`if embed !== "1" return {}`) คืน {} → title default
+
+### B. "ภาค N" → "ภาคเรียนที่ N" (8 ไฟล์ UI)
+แก้เฉพาะข้อความที่ผู้ใช้เห็น (NOT "ระหว่างภาค" · NOT comments/internal)
+
+### C. Optimistic UI ทั้งระบบ — แก้ "เลือกแล้วไม่ active ทันที"
+**ปัญหา:** React 19 controlled `<Select value={prop}>` · value ผูกกับ prop จาก URL ·
+อัปเดตตอน navigation commit เท่านั้น → dropdown/tab ค้างค่าเก่าจนโหลดเสร็จ
+**แก้:** `useOptimisticValue(propValue)` — useState mirror + useEffect reset เมื่อ prop เปลี่ยน
+- `OptimisticTabs` — client tab bar (เดือน/ภาคเรียน/sub-tab) optimistic active
+- Applied: score-structure · attendance (รายวัน + by-subject) · teaching · subjects ·
+  characteristics · competency · reading-thinking · teachers-filters · grade-filter · room-filter
+- **DirectPrintButton** — กดพิมพ์ → modal overlay เต็มจอ "กำลังเตรียมรายงาน…" ทันที
+  (กัน user กดที่อื่นระหว่างรอ) · dismiss ใน finally
+
+### D. ปพ.6 รายนักเรียน (1 นักเรียน = 1 หน้า A4) — ใหม่ทั้งหมด
+**เมนู:** "พิมพ์เล่มรายงาน" → "ปพ.6 รายนักเรียน" · **select-first**
+ชั้น → ห้อง → ทั้งห้อง/รายบุคคล → นักเรียน → (ประถม) เทอม/ทั้งปี → อันดับ → ปุ่ม "สร้างรายงาน"
+
+**Route:** `/reports/pp6?classroom=&semester=&student=&scope=&rank=&embed=`
+- `scope=all|individual` · `rank` ON (default) = แสดง+เรียงตาม GPA · `rank=0` = ซ่อน+เรียงเลขที่
+
+**Layout (ตาราง):**
+- พื้นฐานก่อนเพิ่มเติม (category core→additional → learning_area → code)
+- Pad วิชาเป็น 15 แถว + กิจกรรมเป็น 4 แถว (ความสูงหน้าเท่ากันทุกใบ · เกินแสดงจริงทั้งหมด)
+- คอลัมน์: **ประถม = "เวลาเรียน (ชั่วโมง)"** (แสดง hours_per_year ดิบ) · **มัธยม = "น้ำหนัก (หน่วยกิต)"**
+- GPA = Σ(เกรด × weight) ÷ Σ(weight) · ประถม weight = hours/40 · มัธยม = credit_hours · ร/มส = 0
+- อันดับ = dense rank by GPA ในห้อง
+
+**สรุปผลการประเมิน (ตารางมีเส้นขอบ):**
+เวลาเรียนวิชาพื้นฐานที่ได้ → เพิ่มเติม → กิจกรรมพัฒนาผู้เรียน → **รวม** (พื้นฐาน+เพิ่มเติม+กิจกรรม) →
+คุณลักษณะอันพึงประสงค์ → การอ่าน คิด วิเคราะห์และเขียน → กิจกรรมพัฒนาผู้เรียน → GPA (เต็มแถว)
+
+**Selector — manual generate (ล่าสุด):**
+- ไม่ auto-preview · กด "สร้างรายงาน" (ใต้ checkbox อันดับ) ค่อยโหลด iframe
+- เปลี่ยนค่าใดๆ → preview reset (กันค้างค่าเก่า) · print/zoom เปิดเมื่อ generate แล้ว
+
+**ลายเซ็นครูประจำชั้น:**
+- คำนำหน้า "ครู{ชื่อ-สกุล}" (สั้นกว่า นาย/นาง → ไม่ตกบรรทัด) · เส้นประยาวขึ้นเมื่อมีครู 2 คน
+- summary block: ตารางสรุป (ซ้าย 48%) · ลายเซ็น (ขวา 52%)
+
+**Files:**
+```
+reports/_shared/score-report.tsx  ← 10 shared score components (extract จาก pp5)
+reports/score-table/page.tsx      ← standalone "บันทึกคะแนน" print route
+reports/pp6/page.tsx              ← route + Pp6Page/Pp6StudentPage + data fetch + GPA/rank
+reports/pp6/pp6-selector-form.tsx ← select-first + manual "สร้างรายงาน" + iframe preview
+setup/_components/use-optimistic-value.ts + optimistic-tabs.tsx  ← optimistic helpers
+_components/direct-print-button.tsx ← loading overlay
+_components/sidebar.tsx           ← + "ปพ.6 รายนักเรียน"
+globals.css                       ← .pp6-* (page/logo/table/summary-table)
+```
+
+### Test verify (เมื่อกลับมา · ต้องมีคะแนนจริง)
+```
+# /reports/score-table?... → PDF ชื่อ "บันทึกคะแนน"
+# /reports/pp6 → เลือกครบ → "สร้างรายงาน" → preview 1 นักเรียน/หน้า
+#   ├─ ประถม: เวลาเรียน(ชม.) · สรุป "เวลาเรียนวิชา…ที่ได้"
+#   ├─ มัธยม: น้ำหนัก(หน่วยกิต)
+#   ├─ อันดับ ON → เรียง GPA + "ได้อันดับที่ N ของห้อง" · OFF → เลขที่
+#   └─ ลายเซ็น "ครู…" ไม่ล้น · 2 ครู เส้นยาว
+# ทุก dropdown/tab → active ทันที (optimistic)
+# กดพิมพ์ → modal "กำลังเตรียมรายงาน…" เด้งทันที
+```
+
+### ค้าง (verify เมื่อมีข้อมูลจริง)
+ปพ.6: ความถูกต้องของ activity fetch · gradeName wording · signature/decimal format
+(ยังไม่ตรวจกับ PDF จริงเพราะยังไม่มีห้องที่คะแนนครบ)
 5. ระดับชั้น (ประถม / มัธยม)
 6. หน่วยกิต / เวลาเรียน / รวมเวลาเรียน
 7. ครูผู้สอน
