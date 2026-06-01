@@ -1,6 +1,7 @@
 import { createAdminClient } from "@pp5/database/admin";
 import { createClient } from "@pp5/database/server";
 import Link from "next/link";
+import { Fragment } from "react";
 import { ensureCategorySlots, ensureSecondaryCategorySlots } from "../../setup/score-structure/actions";
 import {
   abbreviateTitle,
@@ -454,106 +455,141 @@ export default async function Pp5Page({ searchParams }: Props) {
         : 0;
   const totalSlots = slotsPerWeek * 20;
 
+  // Anchor inputs for the weekly-grid month labels. Captured into plain
+  // locals here (where the `if (!classroom...) return` narrowing from §2
+  // still holds) so the buildOfferingAttendance closure below doesn't need
+  // to re-narrow `classroom` — TS doesn't carry the narrowing into a nested
+  // function body. start_date/end_date come from the school's configured
+  // academic-year dates (fallback handled per-semester inside the helper).
+  const yearStartDate = classroom.academic_year.start_date ?? null;
+  const yearEndDate = classroom.academic_year.end_date ?? null;
+  const academicYearBe = classroom.academic_year.year_be;
+
   type AttendanceSummary = {
     present: number;
     absent: number;
     leave: number;
     pct: number;
   };
-  const attendanceSummaryByStudent = new Map<string, AttendanceSummary>();
-  // Per-student × (week, slot) status — used by the weekly-grid section
-  // to render each cell. Key format: `${week}|${slot}`
-  const attendanceByStudentByCell = new Map<
-    string,
-    Map<string, "present" | "absent" | "leave">
-  >();
-  if (totalSlots > 0 && studentIds.length > 0) {
-    // Paginate by .range() — Supabase max-rows defaults to 1000, and a
-    // fully-recorded ปพ.5 offering can exceed that (18 students × 80 slots
-    // = 1440). Without explicit ranging, the newest cells silently drop
-    // out of the SELECT result.
-    type SaRow = {
-      student_id: string;
-      week: number;
-      slot_in_week: number;
-      status: "present" | "absent" | "leave" | "sick";
+
+  type OfferingAttendance = {
+    weeklyGridPayload: {
+      slotsPerWeek: number;
+      anchorIso: string;
+      cellsByStudent: Map<string, Map<string, "present" | "absent" | "leave">>;
+      countsByStudent: Map<string, AttendanceSummary>;
+      totalSlots: number;
     };
-    const PAGE = 1000;
-    const saRows: SaRow[] = [];
-    let from = 0;
-    while (true) {
-      const { data, error } = await supabase
-        .from("subject_attendance")
-        .select("student_id, week, slot_in_week, status")
-        .eq("offering_id", offering.id)
-        .in("student_id", studentIds)
-        .order("week", { ascending: true })
-        .order("slot_in_week", { ascending: true })
-        .range(from, from + PAGE - 1);
-      if (error) break;
-      if (!data || data.length === 0) break;
-      saRows.push(...(data as SaRow[]));
-      if (data.length < PAGE) break;
-      from += PAGE;
-    }
-    for (const row of saRows) {
-      // Summary counts
-      let agg = attendanceSummaryByStudent.get(row.student_id);
-      if (!agg) {
-        agg = { present: 0, absent: 0, leave: 0, pct: 0 };
-        attendanceSummaryByStudent.set(row.student_id, agg);
-      }
-      if (row.status === "present") agg.present++;
-      else if (row.status === "absent") agg.absent++;
-      else if (row.status === "leave") agg.leave++;
+    attendancePayload: {
+      totalSlots: number;
+      summaryByStudent: Map<string, AttendanceSummary>;
+    };
+  };
 
-      // Per-cell map (only the 3 UI statuses; skip "sick" if any slipped in)
-      if (
-        row.status === "present" ||
-        row.status === "absent" ||
-        row.status === "leave"
-      ) {
-        const key = `${row.week}|${row.slot_in_week}`;
-        let cellMap = attendanceByStudentByCell.get(row.student_id);
-        if (!cellMap) {
-          cellMap = new Map();
-          attendanceByStudentByCell.set(row.student_id, cellMap);
+  // Build the weekly-grid + summary payloads for ONE offering / semester.
+  //
+  // `slotsPerWeek` / `totalSlots` are SEMESTER-INDEPENDENT (computed once
+  // above from credit_hours / hours_per_year) and closed over here. The only
+  // per-semester inputs are `offeringId` (which subject_attendance rows to
+  // read) and `sem` (which drives the weekly-grid month-label anchor).
+  //
+  // PRIMARY shows this for BOTH semesters (user spec 2026-06-01); SECONDARY
+  // shows it for the single URL semester only.
+  async function buildOfferingAttendance(
+    offeringId: string,
+    sem: 1 | 2,
+  ): Promise<OfferingAttendance> {
+    const summaryByStudent = new Map<string, AttendanceSummary>();
+    // Per-student × (week, slot) status — used by the weekly-grid section
+    // to render each cell. Key format: `${week}|${slot}`
+    const cellsByStudent = new Map<
+      string,
+      Map<string, "present" | "absent" | "leave">
+    >();
+    if (totalSlots > 0 && studentIds.length > 0) {
+      // Paginate by .range() — Supabase max-rows defaults to 1000, and a
+      // fully-recorded ปพ.5 offering can exceed that (18 students × 80 slots
+      // = 1440). Without explicit ranging, the newest cells silently drop
+      // out of the SELECT result.
+      type SaRow = {
+        student_id: string;
+        week: number;
+        slot_in_week: number;
+        status: "present" | "absent" | "leave" | "sick";
+      };
+      const PAGE = 1000;
+      const saRows: SaRow[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("subject_attendance")
+          .select("student_id, week, slot_in_week, status")
+          .eq("offering_id", offeringId)
+          .in("student_id", studentIds)
+          .order("week", { ascending: true })
+          .order("slot_in_week", { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (error) break;
+        if (!data || data.length === 0) break;
+        saRows.push(...(data as SaRow[]));
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+      for (const row of saRows) {
+        // Summary counts
+        let agg = summaryByStudent.get(row.student_id);
+        if (!agg) {
+          agg = { present: 0, absent: 0, leave: 0, pct: 0 };
+          summaryByStudent.set(row.student_id, agg);
         }
-        cellMap.set(key, row.status);
+        if (row.status === "present") agg.present++;
+        else if (row.status === "absent") agg.absent++;
+        else if (row.status === "leave") agg.leave++;
+
+        // Per-cell map (only the 3 UI statuses; skip "sick" if any slipped in)
+        if (
+          row.status === "present" ||
+          row.status === "absent" ||
+          row.status === "leave"
+        ) {
+          const key = `${row.week}|${row.slot_in_week}`;
+          let cellMap = cellsByStudent.get(row.student_id);
+          if (!cellMap) {
+            cellMap = new Map();
+            cellsByStudent.set(row.student_id, cellMap);
+          }
+          cellMap.set(key, row.status);
+        }
+      }
+      // Compute % per student (after counting)
+      for (const agg of summaryByStudent.values()) {
+        agg.pct = Math.round((agg.present / totalSlots) * 100);
       }
     }
-    // Compute % per student (after counting)
-    for (const agg of attendanceSummaryByStudent.values()) {
-      agg.pct = Math.round((agg.present / totalSlots) * 100);
-    }
+
+    // Compute anchor for the weekly-grid month labels (uses the school's
+    // configured start_date / end_date or fallback Thai standard).
+    const anchorIso = (() => {
+      const configured = sem === 1 ? yearStartDate : yearEndDate;
+      if (configured) return configured;
+      const yearCe = academicYearBe - 543;
+      return sem === 1 ? `${yearCe}-05-16` : `${yearCe}-11-01`;
+    })();
+
+    return {
+      weeklyGridPayload: {
+        slotsPerWeek,
+        anchorIso,
+        cellsByStudent,
+        countsByStudent: summaryByStudent,
+        totalSlots,
+      },
+      attendancePayload: {
+        totalSlots,
+        summaryByStudent,
+      },
+    };
   }
-
-  const attendancePayload = {
-    totalSlots,
-    summaryByStudent: attendanceSummaryByStudent,
-  };
-
-  // Compute anchor for the weekly-grid month labels (uses the school's
-  // configured start_date / end_date or fallback Thai standard).
-  const weeklyGridAnchorIso = (() => {
-    const sd = classroom.academic_year as {
-      start_date?: string | null;
-      end_date?: string | null;
-    } | null;
-    const configured =
-      semester === 1 ? sd?.start_date : sd?.end_date;
-    if (configured) return configured;
-    const yearCe = classroom.academic_year.year_be - 543;
-    return semester === 1 ? `${yearCe}-05-16` : `${yearCe}-11-01`;
-  })();
-
-  const weeklyGridPayload = {
-    slotsPerWeek,
-    anchorIso: weeklyGridAnchorIso,
-    cellsByStudent: attendanceByStudentByCell,
-    countsByStudent: attendanceSummaryByStudent,
-    totalSlots,
-  };
 
   // Helpers used both in the cover and the existing footer/header:
   //   - "ม.1" → "ตอนต้น" (ม.1-3) · "ม.4-6" → "ตอนปลาย"
@@ -839,18 +875,33 @@ export default async function Pp5Page({ searchParams }: Props) {
     null;
   let secondaryBundle: SemScoreBundle | null = null;
 
+  // Attendance (weekly grid + summary) per semester to render. PRIMARY shows
+  // BOTH semesters (user spec 2026-06-01); SECONDARY shows only the URL
+  // semester. Built here so primary can reuse the offering ids resolved for
+  // the scores branch (same offerings back both scores AND attendance).
+  const attendanceList: Array<
+    { sem: 1 | 2 } & OfferingAttendance
+  > = [];
+
   if (isPrimary) {
     const [sem1Id, sem2Id] = await Promise.all([
       ensureOfferingId(classroomId, subjectId, 1),
       ensureOfferingId(classroomId, subjectId, 2),
     ]);
-    const [sem1Bundle, sem2Bundle] = await Promise.all([
+    const [sem1Bundle, sem2Bundle, sem1Att, sem2Att] = await Promise.all([
       loadSemBundle(sem1Id, true),
       loadSemBundle(sem2Id, true),
+      buildOfferingAttendance(sem1Id, 1),
+      buildOfferingAttendance(sem2Id, 2),
     ]);
     primaryBundles = { sem1: sem1Bundle, sem2: sem2Bundle };
+    attendanceList.push({ sem: 1, ...sem1Att }, { sem: 2, ...sem2Att });
   } else {
     secondaryBundle = await loadSemBundle(offering.id, false);
+    attendanceList.push({
+      sem: semester,
+      ...(await buildOfferingAttendance(offering.id, semester)),
+    });
   }
 
   const { data: scalesData } = await supabase
@@ -935,23 +986,32 @@ export default async function Pp5Page({ searchParams }: Props) {
           xcompact={students.length > 35}
         />
       )}
-      {parts.weeklyGrid && (
-        <AttendanceWeeklyGridSection
-          students={students}
-          info={headerInfo}
-          {...weeklyGridPayload}
-        />
-      )}
-      {/* Attendance summary placed RIGHT after the weekly grid per user
-          spec 2026-05-19 — they read together (raw weekly cells → roll-up).
-          Was previously after scores. */}
-      {parts.attendance && (
-        <AttendanceSummarySection
-          students={students}
-          info={headerInfo}
-          {...attendancePayload}
-        />
-      )}
+      {/* Weekly grid + summary. PRIMARY renders BOTH semesters back-to-back
+          (each pair labelled "ภาคเรียนที่ N" via the `semester` prop); each
+          semester's summary sits RIGHT after its own weekly grid per user
+          spec 2026-05-19 (raw weekly cells → roll-up read together).
+          SECONDARY renders exactly one entry (the URL semester) and the
+          `semester` prop is the URL semester → output unchanged. */}
+      {attendanceList.map((a) => (
+        <Fragment key={a.sem}>
+          {parts.weeklyGrid && (
+            <AttendanceWeeklyGridSection
+              students={students}
+              info={headerInfo}
+              semester={attendanceList.length > 1 ? a.sem : undefined}
+              {...a.weeklyGridPayload}
+            />
+          )}
+          {parts.attendance && (
+            <AttendanceSummarySection
+              students={students}
+              info={headerInfo}
+              semester={attendanceList.length > 1 ? a.sem : undefined}
+              {...a.attendancePayload}
+            />
+          )}
+        </Fragment>
+      ))}
       {parts.scores &&
         (isPrimary && primaryBundles ? (
           // PRIMARY scores — output depends on the print MODE:
@@ -1496,6 +1556,7 @@ function AttendanceWeeklyGridSection({
   cellsByStudent,
   countsByStudent,
   totalSlots,
+  semester,
 }: {
   students: Array<{
     id: string;
@@ -1514,8 +1575,16 @@ function AttendanceWeeklyGridSection({
     { present: number; absent: number; leave: number; pct: number }
   >;
   totalSlots: number;
+  /** When set (primary 2-semester bundle), the title gets " ภาคเรียนที่ N"
+   *  and the meta row shows this semester instead of info.semester. When
+   *  undefined (secondary / legacy), renders exactly as before using
+   *  info.semester. */
+  semester?: 1 | 2;
 }) {
   if (slotsPerWeek === 0 || students.length === 0) return null;
+  // Effective semester for the meta row — falls back to the document-level
+  // info.semester when the per-section prop is absent (legacy / secondary).
+  const sectionSemester = semester ?? info.semester;
 
   // Compute Mon-Fri date range label per week — matches the /setup/attendance/
   // by-subject UI ("18-22 พ.ค." or cross-month "30 พ.ค. - 3 มิ.ย.").
@@ -1609,6 +1678,7 @@ function AttendanceWeeklyGridSection({
             <header className="att-page-header">
               <h1 className="att-page-title">
                 แบบบันทึกเวลาเรียนรายวิชา {info.classLabel}
+                {semester ? ` ภาคเรียนที่ ${semester}` : ""}
               </h1>
               <div className="att-page-meta">
                 <span>
@@ -1618,7 +1688,7 @@ function AttendanceWeeklyGridSection({
                   รายวิชา <strong>{info.subjectName}</strong>
                 </span>
                 <span>
-                  ภาคเรียนที่ <strong>{info.semester}</strong>
+                  ภาคเรียนที่ <strong>{sectionSemester}</strong>
                 </span>
                 <span>
                   ปีการศึกษา <strong>{info.yearBe}</strong>
@@ -1798,6 +1868,7 @@ function AttendanceSummarySection({
   totalSlots,
   summaryByStudent,
   info,
+  semester,
 }: {
   students: Array<{
     id: string;
@@ -1813,8 +1884,16 @@ function AttendanceSummarySection({
   /** Header info — used to render the full att-page-header (title, meta,
    *  school, สังกัด) to match the weekly grid pages right above. */
   info: HeaderInfo;
+  /** When set (primary 2-semester bundle), the title gets " ภาคเรียนที่ N"
+   *  and the meta row shows this semester instead of info.semester. When
+   *  undefined (secondary / legacy), renders exactly as before using
+   *  info.semester. */
+  semester?: 1 | 2;
 }) {
   if (totalSlots === 0 || students.length === 0) return null;
+  // Effective semester for the meta row — falls back to the document-level
+  // info.semester when the per-section prop is absent (legacy / secondary).
+  const sectionSemester = semester ?? info.semester;
   return (
     // Uses pp5-page-content-wide so it inherits `@page pp5-bundle-weekly`
     // (15mm top, 10mm sides) — matches the weekly grid pages it follows.
@@ -1825,6 +1904,7 @@ function AttendanceSummarySection({
       <header className="att-page-header">
         <h1 className="att-page-title">
           สรุปเวลาเรียนรายวิชา {info.classLabel}
+          {semester ? ` ภาคเรียนที่ ${semester}` : ""}
         </h1>
         <div className="att-page-meta">
           <span>
@@ -1834,7 +1914,7 @@ function AttendanceSummarySection({
             รายวิชา <strong>{info.subjectName}</strong>
           </span>
           <span>
-            ภาคเรียนที่ <strong>{info.semester}</strong>
+            ภาคเรียนที่ <strong>{sectionSemester}</strong>
           </span>
           <span>
             ปีการศึกษา <strong>{info.yearBe}</strong>
