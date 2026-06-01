@@ -9,7 +9,7 @@ import type { AttendanceStatus } from "./actions";
 import { DirectPrintButton } from "../../_components/direct-print-button";
 import { FilterNavProvider } from "../_components/filter-nav-context";
 import { FilterNavGate } from "../_components/filter-nav-gate";
-import { FilterNavLink } from "../_components/filter-nav-link";
+import { OptimisticTabs } from "../_components/optimistic-tabs";
 import { AttendanceGrid, type StudentRow } from "./attendance-grid";
 import { AttendanceSummarySection } from "./summary-section";
 import {
@@ -335,41 +335,36 @@ export default async function AttendancePage({ searchParams }: Props) {
           + /setup/students pattern) — no in-page term switcher. */}
       {isPrimary ? (
         <div className="mb-2 flex gap-1 border-b border-zinc-200">
-          {(
-            [
-              { id: "1" as TabValue, sem: 1 as 1 | 2, base: "ภาคเรียนที่ 1" },
-              { id: "2" as TabValue, sem: 2 as 1 | 2, base: "ภาคเรียนที่ 2" },
-              { id: "summary" as TabValue, sem: null, base: "🏆 สรุปรวม" },
-            ]
-          ).map((t) => {
-            const isActive = t.id === tab;
-            // Same primary override as termState above — ประถมไม่มี 🔒 บน past
-            // tab เพราะแก้ได้ตลอดทั้งปี
-            const rawState =
-              t.sem === null ? "current" : semesterStateOf(t.sem, currentTerm);
-            const state =
-              isPrimary && rawState === "past" ? "current" : rawState;
-            const icon = state === "past" ? "🔒 " : state === "future" ? "⏳ " : "";
-            const nextMonth =
-              t.id === "summary"
-                ? undefined
-                : defaultMonthForTerm(t.id === "2" ? 2 : 1);
-            return (
-              <FilterNavLink
-                key={t.id}
-                href={buildUrl(t.id, nextMonth)}
-                aria-current={isActive ? "page" : undefined}
-                className={
-                  isActive
-                    ? "-mb-px border-b-2 border-blue-600 px-4 py-2.5 text-sm font-semibold text-blue-700"
-                    : "-mb-px border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
-                }
-              >
-                {icon}
-                {t.base}
-              </FilterNavLink>
-            );
-          })}
+          <OptimisticTabs
+            currentTab={tab}
+            tabs={(
+              [
+                { id: "1" as TabValue, sem: 1 as 1 | 2, base: "ภาคเรียนที่ 1" },
+                { id: "2" as TabValue, sem: 2 as 1 | 2, base: "ภาคเรียนที่ 2" },
+                { id: "summary" as TabValue, sem: null, base: "🏆 สรุปรวม" },
+              ]
+            ).map((t) => {
+              // Same primary override as termState above — ประถมไม่มี 🔒 บน
+              // past tab เพราะแก้ได้ตลอดทั้งปี
+              const rawState =
+                t.sem === null ? "current" : semesterStateOf(t.sem, currentTerm);
+              const state =
+                isPrimary && rawState === "past" ? "current" : rawState;
+              const icon =
+                state === "past" ? "🔒 " : state === "future" ? "⏳ " : "";
+              const nextMonth =
+                t.id === "summary"
+                  ? undefined
+                  : defaultMonthForTerm(t.id === "2" ? 2 : 1);
+              return {
+                id: t.id,
+                label: `${icon}${t.base}`,
+                href: buildUrl(t.id, nextMonth),
+              };
+            })}
+            activeClass="-mb-px border-b-2 border-blue-600 px-4 py-2.5 text-sm font-semibold text-blue-700"
+            inactiveClass="-mb-px border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
+          />
         </div>
       ) : (
         // Secondary — show a small bar pointing at /setup/academic-years
@@ -389,34 +384,20 @@ export default async function AttendancePage({ searchParams }: Props) {
       {/* Tab Level 2 — month tabs (only when term ≠ summary) */}
       {tab !== "summary" && (
         <div className="mb-4 flex flex-wrap gap-1">
-          {TERM_MONTHS[tab === "2" ? 2 : 1].map((m) => {
-            const isActive = m === selectedMonth;
-            return (
-              <FilterNavLink
-                key={m}
-                href={buildUrl(tab, m)}
-                aria-current={isActive ? "page" : undefined}
-                className={
-                  isActive
-                    ? "rounded-md bg-blue-100 px-3 py-1.5 text-sm font-semibold text-blue-800 ring-1 ring-blue-300"
-                    : "rounded-md bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50"
-                }
-              >
-                {THAI_MONTH_SHORT[m - 1]}
-              </FilterNavLink>
-            );
-          })}
-          <FilterNavLink
-            href={buildUrl(tab, -1)} // -1 = summary for this term
-            aria-current={isTermSummary ? "page" : undefined}
-            className={
-              isTermSummary
-                ? "rounded-md bg-blue-100 px-3 py-1.5 text-sm font-semibold text-blue-800 ring-1 ring-blue-300"
-                : "rounded-md bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50"
-            }
-          >
-            สรุป
-          </FilterNavLink>
+          <OptimisticTabs
+            currentTab={isTermSummary ? "-1" : String(selectedMonth)}
+            tabs={[
+              ...TERM_MONTHS[tab === "2" ? 2 : 1].map((m) => ({
+                id: String(m),
+                label: THAI_MONTH_SHORT[m - 1],
+                href: buildUrl(tab, m),
+              })),
+              // -1 = summary for this term
+              { id: "-1", label: "สรุป", href: buildUrl(tab, -1) },
+            ]}
+            activeClass="rounded-md bg-blue-100 px-3 py-1.5 text-sm font-semibold text-blue-800 ring-1 ring-blue-300"
+            inactiveClass="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50"
+          />
         </div>
       )}
 
