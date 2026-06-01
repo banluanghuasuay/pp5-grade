@@ -1,9 +1,16 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { FilterNavLink } from "./filter-nav-link";
 import { useOptimisticValue } from "./use-optimistic-value";
 
-type TabItem = { id: string; label: string; href: string };
+/** `label` may be a static node, or a function of the (optimistic) active
+ *  state — used when a tab's content restyles when active (e.g. a badge). */
+type TabItem = {
+  id: string;
+  label: ReactNode | ((isActive: boolean) => ReactNode);
+  href: string;
+};
 
 /**
  * A tab bar whose ACTIVE highlight updates INSTANTLY on click (optimistic),
@@ -32,6 +39,8 @@ export function OptimisticTabs({
     <>
       {tabs.map((t) => {
         const isActive = t.id === tabVal;
+        const label =
+          typeof t.label === "function" ? t.label(isActive) : t.label;
         return (
           <FilterNavLink
             key={t.id}
@@ -40,7 +49,7 @@ export function OptimisticTabs({
             className={isActive ? activeClass : inactiveClass}
             onClick={() => setTabOpt(t.id)}
           >
-            {t.label}
+            {label}
           </FilterNavLink>
         );
       })}
