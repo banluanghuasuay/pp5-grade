@@ -1,12 +1,19 @@
 import { createClient } from "@pp5/database/server";
 import { notFound } from "next/navigation";
 import {
+  abbreviateTitle,
   averageTwoSemesters,
   cutGrade,
 } from "../../setup/score-structure/grading-utils";
 import { type HeaderInfo, Pp5Frame } from "../_shared/score-report";
 import type { Metadata } from "next";
 import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
+import { getTeacherScope } from "@/lib/teacher-scope";
+import {
+  type ClassroomOption,
+  Pp6SelectorForm,
+  type StudentOption,
+} from "./pp6-selector-form";
 
 // ===================================================================
 // /reports/pp6 — ปพ.6 (แบบรายงานผลการพัฒนาคุณภาพผู้เรียนรายบุคคล)
@@ -50,10 +57,14 @@ type Props = {
     semester?: string;
     /** A single student's id — when present, render ONLY that student. */
     student?: string;
-    /** "all" | "individual". Cosmetic this phase: `student` presence is what
-     *  actually decides single vs. all. */
+    /** "all" | "individual". `student` presence is what actually decides
+     *  single vs. all; this is passed through for URL clarity. */
     scope?: string;
-    /** "1" → rendered inside the selector's preview iframe (later phase). */
+    /** "1" (default) → order students by เลขที่ (student_number). "0" →
+     *  keep the enrollment's natural order. */
+    sort?: string;
+    /** "1" → rendered inside the selector's preview iframe. Otherwise the
+     *  page renders the <Pp6SelectorForm> instead of the report. */
     embed?: string;
   }>;
 };
@@ -108,11 +119,23 @@ export default async function Pp6Page({ searchParams }: Props) {
   const params = await searchParams;
   const classroomId = params.classroom?.trim();
   const isEmbed = params.embed === "1";
-  const onlyStudentId = params.student?.trim() || null;
+  // scope=all forces the whole-class render even if a stray `student` id is
+  // present; otherwise the `student` param narrows to one page.
+  const scopeMode = params.scope?.trim() === "all" ? "all" : "individual";
+  const onlyStudentId =
+    scopeMode === "all" ? null : params.student?.trim() || null;
+  // เรียงตามเลขที่ — default ON. Only "0" turns it off (natural order).
+  const sortByNumber = params.sort?.trim() !== "0";
 
   const scopeRaw = params.semester?.trim();
   const scope: ScopeParam =
     scopeRaw === "2" ? "2" : scopeRaw === "annual" ? "annual" : "1";
+
+  // Not the print iframe → show the selector UI instead of the report.
+  // (Render the report only when embed=1, matching pp5-class.)
+  if (!isEmbed) {
+    return <Pp6Selector />;
+  }
 
   if (!classroomId) {
     notFound();
@@ -164,6 +187,10 @@ export default async function Pp6Page({ searchParams }: Props) {
   //    the current term. One page per enrolled student (unless `student`
   //    narrows to one).
   const enrollmentSemester: 0 | 1 | 2 = isPrimary ? 0 : secondarySemester;
+  // เรียงตามเลขที่ (sort=1, default) → order by student_number; otherwise
+  // keep the natural insertion order (sort=0). The `ascending` flag stays
+  // true either way — only the column changes.
+  const orderColumn = sortByNumber ? "student_number" : "created_at";
   const { data: enrolls } = await supabase
     .from("enrollments")
     .select(
@@ -174,7 +201,7 @@ export default async function Pp6Page({ searchParams }: Props) {
     )
     .eq("classroom_id", classroomId)
     .eq("semester", enrollmentSemester)
-    .order("student_number");
+    .order(orderColumn);
 
   const allStudents = (enrolls ?? [])
     .filter((e) => e.student)
@@ -935,4 +962,121 @@ function Pp6StudentPage({
 function fmtScoreInt(n: number): string {
   if (!Number.isFinite(n)) return "0";
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+// ===================================================================
+// Pp6Selector — shown when NOT embed (i.e. the admin opens the menu).
+// Renders the split-pane <Pp6SelectorForm> with a live preview iframe.
+// Resolves the SAME grade→room→classroom-id mapping as pp5-class, plus
+// the enrolled-student roster per room (for the รายบุคคล dropdown).
+// ===================================================================
+async function Pp6Selector() {
+  const supabase = await createClient();
+
+  // Current academic year only — otherwise the dropdown shows duplicate
+  // rooms (one classrooms row per year-room combo). Mirrors pp5-class.
+  const { data: currentYear } = await supabase
+    .from("academic_years")
+    .select("id, current_semester")
+    .eq("is_current", true)
+    .maybeSingle();
+
+  if (!currentYear) {
+    return <Pp6SelectorForm classrooms={[]} />;
+  }
+  const currentSemester: 1 | 2 = (currentYear.current_semester ?? 1) as 1 | 2;
+
+  // Teacher scope — limit to homeroom classrooms only (same guard rationale
+  // as ปพ.5 รวมชั้น: ปพ.6 is a per-student whole-record bundle).
+  const scope = await getTeacherScope();
+
+  const { data: classroomsRaw } = await supabase
+    .from("classrooms")
+    .select(
+      `
+      id,
+      room_number,
+      grade_level:grade_levels!grade_level_id (id, name_th, name_short, sort_order, system)
+    `,
+    )
+    .eq("academic_year_id", currentYear.id)
+    .order("created_at");
+  const classroomsScoped = scope
+    ? (classroomsRaw ?? []).filter((c) => scope.homeroomClassroomIds.has(c.id))
+    : classroomsRaw;
+  const raw = (classroomsScoped ?? []).filter((c) => c.grade_level);
+  raw.sort((a, b) => {
+    const ga = a.grade_level!.sort_order ?? 0;
+    const gb = b.grade_level!.sort_order ?? 0;
+    if (ga !== gb) return ga - gb;
+    return a.room_number - b.room_number;
+  });
+
+  // Multi-room detection per grade → "/N" suffix only when 2+ rooms share a
+  // grade (matches pp5-class + /setup/homerooms labelling).
+  const roomCountByGrade = new Map<string, number>();
+  for (const c of raw) {
+    const k = c.grade_level!.id;
+    roomCountByGrade.set(k, (roomCountByGrade.get(k) ?? 0) + 1);
+  }
+
+  // Enrolled students per room (for the รายบุคคล dropdown). One query for
+  // ALL rooms, then bucket per classroom. Primary rooms enrol at semester=0
+  // (year-wide); secondary at the current semester — so we fetch BOTH and
+  // pick the right one per room's system when bucketing.
+  const classroomIds = raw.map((c) => c.id);
+  const systemByClassroom = new Map<string, "primary" | "secondary">();
+  for (const c of raw) {
+    systemByClassroom.set(
+      c.id,
+      c.grade_level!.system === "primary" ? "primary" : "secondary",
+    );
+  }
+  const studentsByClassroom = new Map<string, StudentOption[]>();
+  if (classroomIds.length > 0) {
+    const { data: enrolls } = await supabase
+      .from("enrollments")
+      .select(
+        `
+        classroom_id,
+        semester,
+        student_number,
+        student:students!student_id (id, title, first_name, last_name)
+      `,
+      )
+      .in("classroom_id", classroomIds)
+      .in("semester", [0, currentSemester])
+      .order("student_number");
+    for (const e of enrolls ?? []) {
+      if (!e.student) continue;
+      const wantSemester =
+        systemByClassroom.get(e.classroom_id) === "primary"
+          ? 0
+          : currentSemester;
+      if (e.semester !== wantSemester) continue;
+      const list = studentsByClassroom.get(e.classroom_id) ?? [];
+      list.push({
+        id: e.student.id,
+        student_number: e.student_number,
+        label: `${e.student_number}. ${abbreviateTitle(e.student.title)}${e.student.first_name} ${e.student.last_name}`,
+      });
+      studentsByClassroom.set(e.classroom_id, list);
+    }
+  }
+
+  const opts: ClassroomOption[] = raw.map((c) => {
+    const multiRoom = (roomCountByGrade.get(c.grade_level!.id) ?? 0) > 1;
+    const short = c.grade_level!.name_short ?? c.grade_level!.name_th;
+    return {
+      id: c.id,
+      label: multiRoom ? `${short}/${c.room_number}` : short,
+      grade_id: c.grade_level!.id,
+      grade_label: short,
+      grade_sort: c.grade_level!.sort_order ?? 0,
+      is_primary: c.grade_level!.system === "primary",
+      students: studentsByClassroom.get(c.id) ?? [],
+    };
+  });
+
+  return <Pp6SelectorForm classrooms={opts} />;
 }

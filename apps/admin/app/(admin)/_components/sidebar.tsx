@@ -206,6 +206,11 @@ const SECTIONS: NavSection[] = [
         icon: Layers,
         label: "ปพ.5 รวมชั้น",
       },
+      {
+        href: "/reports/pp6",
+        icon: FileText,
+        label: "ปพ.6 รายนักเรียน",
+      },
     ],
   },
 ];
