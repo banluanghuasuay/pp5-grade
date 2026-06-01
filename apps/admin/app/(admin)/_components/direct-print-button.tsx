@@ -36,9 +36,11 @@ export function DirectPrintButton({ url, title }: Props) {
     iframe.style.opacity = "0";
     iframe.src = url;
 
+    // Removes the hidden iframe from the DOM. Kept separate from the overlay
+    // dismissal so the spinner can close the instant the print dialog opens,
+    // while the iframe lingers long enough for the browser to finish printing.
     const cleanup = () => {
       if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-      setPrinting(false);
     };
 
     let printed = false;
@@ -61,6 +63,9 @@ export function DirectPrintButton({ url, title }: Props) {
         console.error("Print failed; opening report in a new tab.", err);
         window.open(url, "_blank", "noopener");
       } finally {
+        // The print dialog is now open (it blocks until dismissed). Drop the
+        // overlay so it isn't stuck behind the dialog.
+        setPrinting(false);
         // Restore the title after the dialog has captured it, then remove
         // the iframe.
         setTimeout(() => {
@@ -79,19 +84,39 @@ export function DirectPrintButton({ url, title }: Props) {
   };
 
   return (
-    <button
-      type="button"
-      onClick={handlePrint}
-      disabled={printing}
-      title={title}
-      className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
-    >
+    <>
+      <button
+        type="button"
+        onClick={handlePrint}
+        disabled={printing}
+        title={title}
+        className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+      >
+        {printing ? (
+          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+        ) : (
+          <Printer className="size-3.5" aria-hidden />
+        )}
+        {printing ? "กำลังเตรียม..." : "พิมพ์รายงาน"}
+      </button>
+
+      {/* Full-screen feedback while the hidden iframe loads (~1-2s) so users
+          don't think the click did nothing and wander off. `no-print` keeps
+          it out of the printed output. Dismissed once triggerPrint runs. */}
       {printing ? (
-        <Loader2 className="size-3.5 animate-spin" aria-hidden />
-      ) : (
-        <Printer className="size-3.5" aria-hidden />
-      )}
-      {printing ? "กำลังเตรียม..." : "พิมพ์รายงาน"}
-    </button>
+        <div
+          className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-3 rounded-lg bg-white px-6 py-5 shadow-xl">
+            <Loader2 className="size-5 animate-spin text-blue-600" aria-hidden />
+            <span className="text-sm font-medium text-zinc-700">
+              กำลังเตรียมรายงาน…
+            </span>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

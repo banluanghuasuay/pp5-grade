@@ -9,7 +9,7 @@ import { getTeacherScope } from "@/lib/teacher-scope";
 import { DirectPrintButton } from "../../_components/direct-print-button";
 import { FilterNavProvider } from "../_components/filter-nav-context";
 import { FilterNavGate } from "../_components/filter-nav-gate";
-import { FilterNavLink } from "../_components/filter-nav-link";
+import { OptimisticTabs } from "../_components/optimistic-tabs";
 import {
   ensureCategorySlots,
   ensureSecondaryCategorySlots,
@@ -658,28 +658,23 @@ export function TabNav({
 
   return (
     <div className="mb-4 flex gap-1 border-b border-zinc-200">
-      {tabs.map((t) => {
-        const isActive = t.id === currentTab;
-        const params = new URLSearchParams();
-        if (gradeId) params.set("grade", gradeId);
-        if (roomId) params.set("room", roomId);
-        if (subjectId) params.set("subject", subjectId);
-        params.set("tab", t.id);
-        return (
-          <FilterNavLink
-            key={t.id}
-            href={`${basePath}?${params.toString()}`}
-            aria-current={isActive ? "page" : undefined}
-            className={
-              isActive
-                ? "-mb-px border-b-2 border-violet-600 px-4 py-2.5 text-sm font-semibold text-violet-700"
-                : "-mb-px border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
-            }
-          >
-            {t.label}
-          </FilterNavLink>
-        );
-      })}
+      <OptimisticTabs
+        currentTab={currentTab}
+        tabs={tabs.map((t) => {
+          const params = new URLSearchParams();
+          if (gradeId) params.set("grade", gradeId);
+          if (roomId) params.set("room", roomId);
+          if (subjectId) params.set("subject", subjectId);
+          params.set("tab", t.id);
+          return {
+            id: t.id,
+            label: t.label,
+            href: `${basePath}?${params.toString()}`,
+          };
+        })}
+        activeClass="-mb-px border-b-2 border-violet-600 px-4 py-2.5 text-sm font-semibold text-violet-700"
+        inactiveClass="-mb-px border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
+      />
     </div>
   );
 }

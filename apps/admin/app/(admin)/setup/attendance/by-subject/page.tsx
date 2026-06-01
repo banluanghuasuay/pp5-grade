@@ -9,7 +9,7 @@ import { getTeacherScope } from "@/lib/teacher-scope";
 import { DirectPrintButton } from "../../../_components/direct-print-button";
 import { FilterNavProvider } from "../../_components/filter-nav-context";
 import { FilterNavGate } from "../../_components/filter-nav-gate";
-import { FilterNavLink } from "../../_components/filter-nav-link";
+import { OptimisticTabs } from "../../_components/optimistic-tabs";
 import { BySubjectSelector } from "./selector";
 import {
   SubjectAttendanceGrid,
@@ -568,23 +568,16 @@ export default async function BySubjectPage({ searchParams }: Props) {
 
           {/* Week-range tabs — 4 tabs ครอบ 5 สัปดาห์/tab */}
           <div className="flex gap-1 border-b border-zinc-200 bg-white px-3 pt-2">
-            {(["1", "2", "3", "4"] as WeekTab[]).map((id) => {
-              const isActive = id === tab;
-              return (
-                <FilterNavLink
-                  key={id}
-                  href={buildTabUrl(id)}
-                  aria-current={isActive ? "page" : undefined}
-                  className={
-                    isActive
-                      ? "-mb-px border-b-2 border-indigo-600 px-3 py-1.5 text-sm font-semibold text-indigo-700"
-                      : "-mb-px border-b-2 border-transparent px-3 py-1.5 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
-                  }
-                >
-                  {TAB_LABEL_BY_TAB[id]}
-                </FilterNavLink>
-              );
-            })}
+            <OptimisticTabs
+              currentTab={tab}
+              tabs={(["1", "2", "3", "4"] as WeekTab[]).map((id) => ({
+                id,
+                label: TAB_LABEL_BY_TAB[id],
+                href: buildTabUrl(id),
+              }))}
+              activeClass="-mb-px border-b-2 border-indigo-600 px-3 py-1.5 text-sm font-semibold text-indigo-700"
+              inactiveClass="-mb-px border-b-2 border-transparent px-3 py-1.5 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
+            />
           </div>
 
           {/* Gate the grid (not the header/tabs) — grid swaps to the spinner
