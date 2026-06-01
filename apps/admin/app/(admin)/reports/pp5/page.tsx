@@ -176,6 +176,7 @@ export default async function Pp5Page({ searchParams }: Props) {
       category,
       grading_mode,
       credit_hours,
+      hours_per_year,
       learning_area:learning_areas!learning_area_id (name_th)
     `,
     )
@@ -444,7 +445,12 @@ export default async function Pp5Page({ searchParams }: Props) {
   const slotsPerWeek =
     subject.credit_hours && subject.credit_hours > 0
       ? Math.max(1, Math.round(subject.credit_hours * 2))
-      : 0;
+      : // Primary has no credit_hours → derive slots/week from hours_per_year
+        // (÷40 weeks/year ≈ hours/week). User spec 2026-06-01: ประถมต้องเห็น
+        // ตารางเวลาเรียน + สรุป ใน ปพ.5 รายวิชา ด้วย.
+        isPrimary && subject.hours_per_year && subject.hours_per_year > 0
+        ? Math.max(1, Math.round(subject.hours_per_year / 40))
+        : 0;
   const totalSlots = slotsPerWeek * 20;
 
   type AttendanceSummary = {
@@ -559,7 +565,11 @@ export default async function Pp5Page({ searchParams }: Props) {
   // ระดับชั้น (cover checkbox): ประถม / มัธยม based on grade.system
   const isPrimaryLevel = classroom.grade_level.system === "primary";
   const isSecondaryLevel = classroom.grade_level.system === "secondary";
-  const hoursPerWeek = subject.credit_hours ? subject.credit_hours * 2 : 0;
+  const hoursPerWeek = subject.credit_hours
+    ? subject.credit_hours * 2
+    : isPrimaryLevel && subject.hours_per_year
+      ? Math.round(subject.hours_per_year / 40)
+      : 0;
   const totalHoursPerSemester = hoursPerWeek * 20;
 
   const headerInfo = {
