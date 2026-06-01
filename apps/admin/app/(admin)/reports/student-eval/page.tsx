@@ -3,7 +3,7 @@ import Link from "next/link";
 import { abbreviateTitle } from "../../setup/score-structure/grading-utils";
 import { PrintButton } from "../pp5/print-button";
 import type { Metadata } from "next";
-import { currentTermSuffix } from "@/lib/current-term";
+import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
 
 export async function generateMetadata({
   searchParams,
@@ -14,8 +14,11 @@ export async function generateMetadata({
   const name = VALID_TYPES.includes(type)
     ? TYPE_TITLE[type]
     : "สรุปผลการประเมิน";
-  const suffix = await currentTermSuffix();
-  return { title: `${name} ${suffix}`.trim() };
+  const [suffix, room] = await Promise.all([
+    currentTermSuffix(),
+    reportClassroomLabel(p.classroom),
+  ]);
+  return { title: [name, room, suffix].filter(Boolean).join(" ") };
 }
 
 // ===================================================================

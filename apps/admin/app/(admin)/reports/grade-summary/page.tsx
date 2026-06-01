@@ -12,14 +12,19 @@ import { ensureCategorySlots } from "../../setup/score-structure/actions";
 import { PrintButton } from "../pp5/print-button";
 import { AutoPrint } from "./auto-print";
 import type { Metadata } from "next";
-import { currentTermSuffix } from "@/lib/current-term";
+import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  searchParams,
+}: Props): Promise<Metadata> {
   // The summary-tab "พิมพ์รายงาน" button opens this WITHOUT embed=1, so —
-  // like the attendance report — always name it for the saved PDF rather
-  // than gating on embed (which would leave it as the constant title).
-  const suffix = await currentTermSuffix();
-  return { title: `สรุปผลการเรียน ${suffix}`.trim() };
+  // like the attendance report — always name it for the saved PDF.
+  const p = await searchParams;
+  const [suffix, room] = await Promise.all([
+    currentTermSuffix(),
+    reportClassroomLabel(p.classroom),
+  ]);
+  return { title: ["สรุปผลการเรียน", room, suffix].filter(Boolean).join(" ") };
 }
 
 // ===================================================================

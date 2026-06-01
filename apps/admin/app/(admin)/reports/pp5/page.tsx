@@ -10,7 +10,7 @@ import {
 import { PrintButton } from "./print-button";
 import { Pp5SelectorForm } from "./pp5-selector-form";
 import type { Metadata } from "next";
-import { currentTermSuffix } from "@/lib/current-term";
+import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
 
 export async function generateMetadata({
@@ -18,8 +18,11 @@ export async function generateMetadata({
 }: Props): Promise<Metadata> {
   const p = await searchParams;
   if (p.embed !== "1") return {};
-  const suffix = await currentTermSuffix();
-  return { title: `ปพ.5 รายวิชา ${suffix}`.trim() };
+  const [suffix, room] = await Promise.all([
+    currentTermSuffix(),
+    reportClassroomLabel(p.classroom),
+  ]);
+  return { title: ["ปพ.5 รายวิชา", room, suffix].filter(Boolean).join(" ") };
 }
 
 type Props = {

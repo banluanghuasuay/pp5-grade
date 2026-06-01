@@ -16,7 +16,7 @@ import {
   EvalSection,
 } from "../pp5/page";
 import type { Metadata } from "next";
-import { currentTermSuffix } from "@/lib/current-term";
+import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
 import {
   Pp5ClassSelectorForm,
@@ -31,8 +31,11 @@ export async function generateMetadata({
   // Embed = the print iframe → its document.title becomes the saved-PDF
   // filename, so name it "<งาน> <ภาคเรียน/ปี>". User spec 2026-05-31.
   if (p.embed !== "1") return {};
-  const suffix = await currentTermSuffix();
-  return { title: `ปพ.5 รวมชั้น ${suffix}`.trim() };
+  const [suffix, room] = await Promise.all([
+    currentTermSuffix(),
+    reportClassroomLabel(p.classroom),
+  ]);
+  return { title: ["ปพ.5 รวมชั้น", room, suffix].filter(Boolean).join(" ") };
 }
 
 // ===================================================================

@@ -47,6 +47,36 @@ export async function currentTermSuffix(): Promise<string> {
 }
 
 /**
+ * Classroom label for report PDF filenames — "ป.1 ห้อง 2" when the grade
+ * has 2+ rooms, else just "ป.1". Uses "ห้อง" (not "/") because the slash
+ * is a path separator and gets stripped/mangled in download filenames.
+ * Empty string when the id is missing/invalid. User spec 2026-06-01.
+ */
+export async function reportClassroomLabel(
+  classroomId: string | undefined,
+): Promise<string> {
+  if (!classroomId) return "";
+  const supabase = await createClient();
+  const { data: c } = await supabase
+    .from("classrooms")
+    .select(
+      "room_number, academic_year_id, grade_level:grade_levels!grade_level_id (id, name_short)",
+    )
+    .eq("id", classroomId)
+    .maybeSingle();
+  if (!c?.grade_level) return "";
+  // Count rooms in this grade+year → only show "ห้อง N" when there are 2+.
+  const { count } = await supabase
+    .from("classrooms")
+    .select("*", { count: "exact", head: true })
+    .eq("grade_level_id", c.grade_level.id)
+    .eq("academic_year_id", c.academic_year_id);
+  return (count ?? 0) > 1
+    ? `${c.grade_level.name_short} ห้อง ${c.room_number}`
+    : c.grade_level.name_short;
+}
+
+/**
  * Compare a target semester against the current term to determine
  * lock state. Useful in both UI (decide disabled/readonly) and
  * server actions (guard writes).

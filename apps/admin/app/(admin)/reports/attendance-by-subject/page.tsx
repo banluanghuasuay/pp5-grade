@@ -3,7 +3,7 @@ import Link from "next/link";
 import { resolveAnchorIso } from "../../setup/attendance/by-subject/term-weeks";
 import { abbreviateTitle } from "../../setup/score-structure/grading-utils";
 import type { Metadata } from "next";
-import { currentTermSuffix } from "@/lib/current-term";
+import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
 import { PrintButton } from "../pp5/print-button";
 
 export async function generateMetadata({
@@ -11,8 +11,13 @@ export async function generateMetadata({
 }: Props): Promise<Metadata> {
   const p = await searchParams;
   if (p.embed !== "1") return {};
-  const suffix = await currentTermSuffix();
-  return { title: `รายงานเวลาเรียนรายวิชา ${suffix}`.trim() };
+  const [suffix, room] = await Promise.all([
+    currentTermSuffix(),
+    reportClassroomLabel(p.classroom),
+  ]);
+  return {
+    title: ["รายงานเวลาเรียนรายวิชา", room, suffix].filter(Boolean).join(" "),
+  };
 }
 
 type Props = {
