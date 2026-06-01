@@ -722,6 +722,131 @@
 }
 
 /* ============================================================
+   ปพ.6 — แบบรายงานผลการพัฒนาคุณภาพผู้เรียนรายบุคคล (per-student record)
+   One A4 portrait page per student. Each page is a `.pp5-page-content`
+   block so the existing `.pp5-page-content + .pp5-page-content`
+   break-before:page rule paginates between students automatically.
+   Tables reuse `.pp5-table` (borders + header bg); `.pp6-table` only
+   trims padding/font for the denser single-student grid.
+   ============================================================ */
+.pp6-page {
+  position: relative;
+}
+/* Header — centred title with "ปพ.6" pinned to the top-right corner. */
+.pp6-header {
+  position: relative;
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+.pp6-doc-tag {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #000;
+}
+.pp6-logo {
+  display: block !important;
+  margin: 0 auto 0.3rem;
+  width: 48px !important;
+  height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
+  object-fit: contain;
+}
+.pp6-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  /* Keep the title clear of the ปพ.6 tag in the corner. */
+  padding: 0 2.5rem;
+  color: #000;
+}
+.pp6-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #000;
+}
+.pp6-affiliation {
+  margin: 0.1rem 0 0;
+  font-size: 12px;
+  color: #000;
+}
+/* Meta line — เลขประจำตัว · ชื่อ-นามสกุล · ระดับชั้น on one row. */
+.pp6-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.5rem;
+  margin: 0.5rem 0 0.4rem;
+  font-size: 12px;
+  color: #000;
+}
+/* Denser table tuning for the single-student ปพ.6 layout. */
+.pp6-table {
+  margin: 0.3rem 0 0.6rem;
+}
+.pp6-table th,
+.pp6-table td {
+  padding: 0.18rem 0.35rem;
+  font-size: 11.5px;
+}
+.pp6-table .pp6-cell-name {
+  text-align: left;
+  padding-left: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pp6-table .pp6-empty {
+  color: #71717a;
+  font-style: italic;
+}
+.pp6-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #000;
+  margin: 0.6rem 0 0.1rem;
+  page-break-after: avoid;
+}
+/* Summary block — left column of labels, right column of signatures. */
+.pp6-summary {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+  page-break-inside: avoid;
+}
+.pp6-summary-left {
+  flex: 1 1 60%;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #000;
+}
+.pp6-summary-left p {
+  margin: 0;
+}
+.pp6-summary-left strong {
+  font-weight: 700;
+}
+.pp6-summary-right {
+  flex: 1 1 40%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #000;
+}
+.pp6-sig-block p {
+  margin: 0;
+}
+.pp6-sig-line {
+  margin-bottom: 0.1rem !important;
+}
+
+/* ============================================================
    ตารางเวลาเรียนรายสัปดาห์ (weekly attendance grid)
    Header: ที่ · ชื่อ-นามสกุล · สัปดาห์ N (with date range) / slot numbers
    Cells:  / (มา) · ข (ขาด) · ล (ลา) · — (ว่าง)
