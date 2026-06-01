@@ -188,19 +188,20 @@
        school name as the primary identifier.
    ============================================================ */
 .att-page .pp5-title {
-  /* Block layout (not flex) so the title lines stack and center as a group;
-     the logo is pulled OUT of the flow (absolute, left) so it sits in front
-     of the lines without shifting the centering. User spec 2026-06-01. */
-  display: block;
-  position: relative;
+  /* Flex group: [logo][centered text block]. The whole group is centered, so
+     the logo sits right in front of the centered lines (small gap) regardless
+     of how long the title is. User spec 2026-06-01. */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.6rem;
+}
+.att-page .att-title-text {
   text-align: center;
-  min-height: 48px;
 }
 .att-page .pp5-header-logo {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  position: static;
+  flex-shrink: 0;
   margin: 0 !important;
   width: 48px !important;
   height: 48px !important;

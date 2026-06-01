@@ -424,13 +424,15 @@ function AttFrame({
               className="pp5-header-logo"
             />
           )}
-          <h1>แบบบันทึกเวลาเรียน {info.classLabel}</h1>
-          <p className="pp5-school-name">
-            {info.schoolName.startsWith("โรงเรียน")
-              ? info.schoolName
-              : `โรงเรียน${info.schoolName}`}
-          </p>
-          <p className="pp5-school-affiliation">สังกัด {info.affiliation}</p>
+          <div className="att-title-text">
+            <h1>แบบบันทึกเวลาเรียน {info.classLabel}</h1>
+            <p className="pp5-school-name">
+              {info.schoolName.startsWith("โรงเรียน")
+                ? info.schoolName
+                : `โรงเรียน${info.schoolName}`}
+            </p>
+            <p className="pp5-school-affiliation">สังกัด {info.affiliation}</p>
+          </div>
         </div>
 
         <div className="pp5-info-grid att-info-grid">
@@ -604,15 +606,15 @@ async function SummaryReport({
               className="pp5-header-logo"
             />
           )}
-          <h1>
-            แบบสรุปเวลาเรียน {info.classLabel}
-          </h1>
-          <p className="pp5-school-name">
-            {info.schoolName.startsWith("โรงเรียน")
-              ? info.schoolName
-              : `โรงเรียน${info.schoolName}`}
-          </p>
-          <p className="pp5-school-affiliation">สังกัด {info.affiliation}</p>
+          <div className="att-title-text">
+            <h1>แบบสรุปเวลาเรียน {info.classLabel}</h1>
+            <p className="pp5-school-name">
+              {info.schoolName.startsWith("โรงเรียน")
+                ? info.schoolName
+                : `โรงเรียน${info.schoolName}`}
+            </p>
+            <p className="pp5-school-affiliation">สังกัด {info.affiliation}</p>
+          </div>
         </div>
 
         <div className="pp5-info-grid">
