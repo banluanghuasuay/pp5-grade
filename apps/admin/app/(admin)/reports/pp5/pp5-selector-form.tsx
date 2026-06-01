@@ -232,11 +232,21 @@ export function Pp5SelectorForm({ classrooms, defaultSemester }: Props) {
   const handlePrint = () => {
     const win = iframeRef.current?.contentWindow;
     if (!win) return;
+    // Save-as-PDF names the file after the TOP document's title — borrow the
+    // report iframe's own <title> (set via generateMetadata) for the print,
+    // then restore. Otherwise every PDF gets the admin page's constant title.
+    const originalTitle = document.title;
+    const reportTitle = iframeRef.current?.contentDocument?.title;
     try {
+      if (reportTitle) document.title = reportTitle;
       win.focus();
       win.print();
     } catch (err) {
       console.error("Print failed", err);
+    } finally {
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1000);
     }
   };
 

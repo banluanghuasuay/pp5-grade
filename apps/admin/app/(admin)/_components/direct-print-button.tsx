@@ -45,7 +45,15 @@ export function DirectPrintButton({ url, title }: Props) {
     const triggerPrint = () => {
       if (printed) return;
       printed = true;
+      // Save-as-PDF takes its filename from the TOP document's title, not the
+      // iframe's. Borrow the report's own <title> (set per-report via
+      // generateMetadata, e.g. "ปพ.5 รวมชั้น ภาคเรียนที่ 1 ปีการศึกษา 2569")
+      // for the duration of the print, then restore. Without this every PDF
+      // is named after the admin page's constant title.
+      const originalTitle = document.title;
+      const reportTitle = iframe.contentDocument?.title;
       try {
+        if (reportTitle) document.title = reportTitle;
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
       } catch (err) {
@@ -53,7 +61,11 @@ export function DirectPrintButton({ url, title }: Props) {
         console.error("Print failed; opening report in a new tab.", err);
         window.open(url, "_blank", "noopener");
       } finally {
-        // Give the print dialog time to capture the iframe, then remove
+        // Restore the title after the dialog has captured it, then remove
+        // the iframe.
+        setTimeout(() => {
+          document.title = originalTitle;
+        }, 1000);
         setTimeout(cleanup, 1500);
       }
     };
