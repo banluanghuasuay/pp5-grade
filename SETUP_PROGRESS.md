@@ -4133,5 +4133,37 @@ globals.css (.att-page header flex · .att-wk-slot min/max · base=print col wid
 `c4eda8c` TabNav · `0a1a52c`+`6db026a` att header · `d46a7bd` โรงเรียนโรงเรียน · `c98ed30` ประถมเวลาเรียน ·
 `9738479` slot uniform · `ac77bde` 2 ภาค · `9a49093` preview=print · `7a4a4e5` dense+dropdown · `2849eed` สรุปทั้งปี
 
+---
+
+## 🚧 Multi-tenant deploy (โรงเรียนอื่น deploy เอง) — เริ่มแล้ว (2026-06-01)
+
+**เป้าหมาย:** แจกโปรเจ็คให้โรงเรียนอื่น · แต่ละที่สมัคร **Supabase + Vercel ของตัวเอง**
+(single-tenant instance แยกกัน · ไม่ใช่ DB เดียวหลายโรงเรียน) · โค้ดพร้อมรองรับ
+(school table 1 row · Supabase ผ่าน env · ไม่ต้องแก้สถาปัตยกรรม)
+
+### ✅ เสร็จแล้ว (งาน "ยาก" เคลียร์ตอน Opus)
+1. **`setup.sql`** (root · 1522 บรรทัด) — schema + indexes + seeds (grade_levels · learning_areas ·
+   characteristics สพฐ. · grade_scales) + RLS · = สถานะปัจจุบันรวมทุก migration ถึง 2026-05-18 ·
+   โรงเรียนใหม่ run ครั้งเดียวใน Supabase SQL Editor (ไม่ต้องไล่ schema.sql + rls + 7 migrations) · `97e5636`
+   - sync schema.sql ด้วย: eval 3 ตาราง CHECK semester → (0,1,2) [ขาด 20260518a] · offerings ยัง (1,2)
+2. **`create-first-admin.sql`** (root) — สร้าง admin คนแรก (chicken-egg: ไม่มี admin → สร้างผ่าน UI ไม่ได้
+   เพราะ fake-email) · Method A: Dashboard Add user (admin@admin.pp5.local · auto-confirm) → SQL INSERT
+   public.users role=admin · Method B: pure-SQL (fragile) · + reset-password snippet · `1c67d36`
+
+### ⬜ เหลือ (งาน "ง่าย" — Sonnet ทำต่อได้)
+1. **`docs/DEPLOY.md`** คู่มือ step-by-step:
+   - Supabase: สมัคร → run `setup.sql` → run `create-first-admin.sql`
+   - Vercel: import repo (monorepo apps/admin + apps/parent · 2 projects หรือ root อันเดียว?) → set env
+   - env keys: `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` · `SUPABASE_SERVICE_ROLE_KEY` ·
+     `NEXT_PUBLIC_SUPABASE_AUTH_STORAGE_KEY` (admin=sb-pp5-admin · parent=sb-pp5-parent)
+   - หลัง login: /setup/school (ชื่อ/โลโก้/อำเภอ/จังหวัด) → /setup/academic-years → ครู → นักเรียน
+2. **เช็ค `.env.example`** (admin + parent มีแล้ว) — verify ครบทุก key + comment
+3. (optional) baseline cleanup: ลบ migrations/ ออกจาก deploy ใหม่ (เก็บเป็นประวัติใน repo ได้)
+
+### หมายเหตุ
+- migrations/ = ประวัติ · deploy ใหม่ใช้ `setup.sql` อย่างเดียว
+- โรงเรียนแรก (prod เดิม) — ถ้ายังไม่ได้ลง `20260518a` (eval CHECK 0) ใช้ `migrations/20260518a` apply เพิ่ม
+- **Sonnet 4.6 ทำงานต่อได้** — งานเหลือ (docs/env) มีโครงสร้างชัด · อ่าน SETUP_PROGRESS + AGENTS.md ก่อนเริ่ม
+
 
 
