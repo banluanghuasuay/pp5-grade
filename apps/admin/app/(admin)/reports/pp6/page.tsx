@@ -794,7 +794,7 @@ function Pp6StudentPage({
           แบบรายงานผลการพัฒนาคุณภาพผู้เรียนรายบุคคล ปีการศึกษา {yearBe}
         </h1>
         <p className="pp6-subtitle">
-          โรงเรียน{schoolName}
+          {schoolName.startsWith("โรงเรียน") ? schoolName : `โรงเรียน${schoolName}`}
           {district ? `  อำเภอ${district}` : ""}
           {province ? `  จังหวัด${province}` : ""}
         </p>
@@ -949,7 +949,7 @@ function Pp6StudentPage({
             <p className="pp6-sig-line">..................................</p>
             <p>( {directorName} )</p>
             <p>
-              {directorTitle} โรงเรียน{schoolName}
+              {directorTitle} {schoolName.startsWith("โรงเรียน") ? schoolName : `โรงเรียน${schoolName}`}
             </p>
           </div>
         </div>
