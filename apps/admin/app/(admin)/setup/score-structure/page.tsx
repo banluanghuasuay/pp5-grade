@@ -193,32 +193,77 @@ export default async function ScoresPage({ searchParams }: Props) {
     );
   }
 
-  // 3. Resolve grade
-  const selectedGrade =
-    sortedGrades.find((g) => g.id === params.grade) ?? sortedGrades[0];
+  // 3. Resolve grade — select-first: no auto-pick, the admin must choose.
+  const selectedGrade = params.grade
+    ? (sortedGrades.find((g) => g.id === params.grade) ?? null)
+    : null;
+
+  // 4. Rooms in the selected grade — single-room auto-picks; multi-room waits.
+  const roomsInGrade = selectedGrade
+    ? (classrooms ?? [])
+        .filter((c) => c.grade_level_id === selectedGrade.id)
+        .sort((a, b) => a.room_number - b.room_number)
+    : [];
+  const selectedClassroom = params.room
+    ? (roomsInGrade.find((r) => r.id === params.room) ?? null)
+    : roomsInGrade.length === 1
+      ? roomsInGrade[0]
+      : null;
+
+  // EARLY GUARD — pick ชั้น (+ ห้อง) before any subject/offering work. This
+  // defers planId/subject fetch + offering auto-create until both are chosen.
+  if (!selectedGrade || !selectedClassroom) {
+    return (
+      <>
+        <PageHeader
+          icon={ClipboardList}
+          iconBg="bg-violet-100 text-violet-700"
+          title="บันทึกคะแนน"
+          description={
+            <>
+              ตั้งคะแนนเต็ม + กรอกคะแนนนักเรียน · ปีปัจจุบัน{" "}
+              <strong className="font-mono">{currentYear.year_be}</strong>
+            </>
+          }
+        />
+        <FilterNavProvider>
+          <Card padding="sm" className="mb-4">
+            <ScoreSelector
+              grades={sortedGrades.map((g) => ({ id: g.id, label: g.name_short }))}
+              selectedGradeId={selectedGrade?.id ?? ""}
+              rooms={roomsInGrade.map((r) => ({
+                id: r.id,
+                label: `${selectedGrade!.name_short}/${r.room_number}`,
+              }))}
+              selectedRoomId=""
+              subjects={[]}
+              selectedSubjectId=""
+              tab={requestedTab}
+            />
+          </Card>
+          <Card variant="dashed" className="p-12 text-center">
+            <p className="text-sm text-zinc-500">
+              {!selectedGrade ? "เลือกระดับชั้นก่อน" : "เลือกห้องเรียนก่อน"}
+            </p>
+          </Card>
+        </FilterNavProvider>
+      </>
+    );
+  }
+
+  // Past this guard, selectedGrade & selectedClassroom are non-null.
   // Phase 4 Plan B — branch UI on the grade level's system field
   const isPrimary = selectedGrade.system === "primary";
-  // Phase 4B — secondary has no semester switcher at all. The page always
-  // renders the school's current_semester (set in /setup/academic-years).
-  // Any `?tab=` param is ignored for secondary; primary keeps its 3-tab
-  // navigation (ภาค 1 / ภาค 2 / สรุปผล).
+  // Phase 4B — secondary has no semester switcher; always renders the
+  // school's current_semester. `?tab=` is ignored for secondary; primary
+  // keeps its 3-tab nav (ภาคเรียนที่ 1 / ภาคเรียนที่ 2 / สรุปผล).
   const tab: Tab = !isPrimary ? defaultTab : requestedTab;
-  const semester: 1 | 2 = tab === "2" ? 2 : 1; // for "summary" we use 1 just as default
+  const semester: 1 | 2 = tab === "2" ? 2 : 1; // "summary" uses 1 as default
 
   // State of the active semester relative to the school's "current":
-  //   - "past"    → readonly (banner: ภาคเรียนนี้ปิดแล้ว)
-  //   - "current" → editable
-  //   - "future"  → disabled (banner: ยังไม่เริ่มภาคเรียนนี้)
+  //   past → readonly · current → editable · future → disabled
   const semesterState =
     tab === "summary" ? "current" : semesterStateOf(semester, currentTerm);
-
-  // 4. Rooms in selected grade
-  const roomsInGrade = (classrooms ?? [])
-    .filter((c) => c.grade_level_id === selectedGrade.id)
-    .sort((a, b) => a.room_number - b.room_number);
-
-  const selectedClassroom =
-    roomsInGrade.find((r) => r.id === params.room) ?? roomsInGrade[0];
 
   // 5. Subject options = ALL subjects in this classroom's PLAN (in current
   //    scope), not just ones with an offering. This way the dropdown shows
@@ -337,10 +382,12 @@ export default async function ScoresPage({ searchParams }: Props) {
     hasTeacher: !!offeringBySubject.get(s.id)?.teacher_id,
   }));
 
-  const selectedSubjectRecord =
-    sortedSubjects.find((s) => s.id === params.subject) ??
-    sortedSubjects[0] ??
-    null;
+  // Subject — single subject auto-picks; multiple subjects wait for a pick.
+  const selectedSubjectRecord = params.subject
+    ? (sortedSubjects.find((s) => s.id === params.subject) ?? null)
+    : sortedSubjects.length === 1
+      ? sortedSubjects[0]
+      : null;
   const selectedSubject = selectedSubjectRecord
     ? {
         id: selectedSubjectRecord.id,
@@ -423,7 +470,7 @@ export default async function ScoresPage({ searchParams }: Props) {
       {/* Body — depends on tab. Gate it so changing ชั้น/ห้อง/วิชา/แท็บ
           paints the loading card instantly. */}
       <FilterNavGate fallback={<TableLoadingCard />}>
-      {!selectedSubject ? (
+      {sortedSubjects.length === 0 ? (
         <Card variant="dashed" className="p-12 text-center">
           <p className="text-sm text-zinc-500">
             ห้องนี้ยังไม่มีวิชาในแผนการเรียน
@@ -434,6 +481,10 @@ export default async function ScoresPage({ searchParams }: Props) {
           >
             ไปเพิ่มวิชาในแผน
           </Link>
+        </Card>
+      ) : !selectedSubject ? (
+        <Card variant="dashed" className="p-12 text-center">
+          <p className="text-sm text-zinc-500">เลือกวิชาก่อน</p>
         </Card>
       ) : (
         // Suspense + key tied to (tab × subject × room): every change

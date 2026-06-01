@@ -184,20 +184,72 @@ export default async function BySubjectPage({ searchParams }: Props) {
     );
   }
 
-  // 3. Resolve selected grade + room
-  const selectedGrade =
-    sortedGrades.find((g) => g.id === params.grade) ?? sortedGrades[0];
-  const isPrimary = selectedGrade.system === "primary";
-  // Subjects scope:
-  //   primary  → semester=0 (year-wide)
-  //   secondary → academic_year.current_semester
-  const effectiveSemester: 0 | 1 | 2 = isPrimary ? 0 : currentSemester;
+  // 3. Resolve grade — select-first: no auto-pick, the admin must choose.
+  const selectedGrade = params.grade
+    ? (sortedGrades.find((g) => g.id === params.grade) ?? null)
+    : null;
 
-  const roomsInGrade = (classrooms ?? [])
-    .filter((c) => c.grade_level_id === selectedGrade.id)
-    .sort((a, b) => a.room_number - b.room_number);
-  const selectedClassroom =
-    roomsInGrade.find((r) => r.id === params.room) ?? roomsInGrade[0];
+  // Rooms — single-room auto-picks; multi-room waits.
+  const roomsInGrade = selectedGrade
+    ? (classrooms ?? [])
+        .filter((c) => c.grade_level_id === selectedGrade.id)
+        .sort((a, b) => a.room_number - b.room_number)
+    : [];
+  const selectedClassroom = params.room
+    ? (roomsInGrade.find((r) => r.id === params.room) ?? null)
+    : roomsInGrade.length === 1
+      ? roomsInGrade[0]
+      : null;
+
+  // EARLY GUARD — pick ชั้น (+ ห้อง) before fetching subjects/offerings or
+  // doing any slot/week math. Everything below depends on a chosen room.
+  if (!selectedGrade || !selectedClassroom) {
+    return (
+      <>
+        <PageHeader
+          icon={BookOpen}
+          iconBg="bg-indigo-100 text-indigo-700"
+          title="บันทึกเวลาเรียนรายวิชา"
+          description={
+            <>
+              เช็คเวลาเรียนต่อ (วิชา × สัปดาห์) ตามมาตรฐาน ปพ.5 · ปีปัจจุบัน{" "}
+              <strong className="font-mono">{currentYear.year_be}</strong>
+            </>
+          }
+        />
+        <FilterNavProvider>
+          <Card padding="sm" className="mb-4">
+            <BySubjectSelector
+              grades={sortedGrades.map((g) => ({ id: g.id, label: g.name_short }))}
+              selectedGradeId={selectedGrade?.id ?? ""}
+              rooms={roomsInGrade.map((r) => ({
+                id: r.id,
+                label: `${selectedGrade!.name_short}/${r.room_number}`,
+              }))}
+              selectedRoomId=""
+              subjects={[]}
+              selectedSubjectId=""
+              tab={
+                params.tab === "2" || params.tab === "3" || params.tab === "4"
+                  ? (params.tab as WeekTab)
+                  : "1"
+              }
+            />
+          </Card>
+          <Card variant="dashed" className="p-12 text-center">
+            <p className="text-sm text-zinc-500">
+              {!selectedGrade ? "เลือกระดับชั้นก่อน" : "เลือกห้องเรียนก่อน"}
+            </p>
+          </Card>
+        </FilterNavProvider>
+      </>
+    );
+  }
+
+  // Past this guard, selectedGrade & selectedClassroom are non-null.
+  const isPrimary = selectedGrade.system === "primary";
+  // Subjects scope: primary → semester=0 (year-wide) · secondary → current
+  const effectiveSemester: 0 | 1 | 2 = isPrimary ? 0 : currentSemester;
 
   // 4. Subjects in this room — fetched from the classroom's PLAN, not via
   //    offerings. This way the dropdown shows EVERY subject the admin added
@@ -324,11 +376,12 @@ export default async function BySubjectPage({ searchParams }: Props) {
     hasTeacher: !!offeringBySubject.get(s.id)?.teacher_id,
   }));
 
-  // Resolve selected subject
-  const selectedSubject =
-    sortedSubjects.find((s) => s.id === params.subject) ??
-    sortedSubjects[0] ??
-    null;
+  // Resolve selected subject — single auto-picks; multiple wait for a pick.
+  const selectedSubject = params.subject
+    ? (sortedSubjects.find((s) => s.id === params.subject) ?? null)
+    : sortedSubjects.length === 1
+      ? sortedSubjects[0]
+      : null;
 
   // 4c. Auto-create offering for the selected subject if missing.
   //     teacher_id stays NULL — admin can record attendance immediately;
@@ -473,7 +526,11 @@ export default async function BySubjectPage({ searchParams }: Props) {
       )}
 
       {/* No subject in this scope */}
-      {!selectedSubject || !selectedOfferingId ? (
+      {sortedSubjects.length > 0 && !selectedSubject ? (
+        <Card variant="dashed" className="p-12 text-center">
+          <p className="text-sm text-zinc-500">เลือกวิชาก่อน</p>
+        </Card>
+      ) : !selectedSubject || !selectedOfferingId ? (
         <Card variant="dashed" className="p-12 text-center">
           <p className="text-sm text-zinc-500">
             ห้องนี้ยังไม่มีวิชาที่เข้าเงื่อนไข — ต้อง:

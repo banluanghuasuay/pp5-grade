@@ -182,22 +182,70 @@ export default async function ActivitiesPage({ searchParams }: Props) {
     );
   }
 
-  // 3. Resolve grade
-  const selectedGrade =
-    sortedGrades.find((g) => g.id === params.grade) ?? sortedGrades[0];
+  // 3. Resolve grade — select-first: no auto-pick, the admin must choose.
+  const selectedGrade = params.grade
+    ? (sortedGrades.find((g) => g.id === params.grade) ?? null)
+    : null;
+
+  // 4. Rooms in the selected grade — single-room auto-picks; multi-room waits.
+  const roomsInGrade = selectedGrade
+    ? (classrooms ?? [])
+        .filter((c) => c.grade_level_id === selectedGrade.id)
+        .sort((a, b) => a.room_number - b.room_number)
+    : [];
+  const selectedClassroom = params.room
+    ? (roomsInGrade.find((r) => r.id === params.room) ?? null)
+    : roomsInGrade.length === 1
+      ? roomsInGrade[0]
+      : null;
+
+  // EARLY GUARD — pick ชั้น (+ ห้อง) before any subject/offering work.
+  if (!selectedGrade || !selectedClassroom) {
+    return (
+      <>
+        <PageHeader
+          icon={Award}
+          iconBg="bg-emerald-100 text-emerald-700"
+          title="กิจกรรมพัฒนาผู้เรียน"
+          description={
+            <>
+              บันทึกผ่าน / ไม่ผ่าน · ปีปัจจุบัน{" "}
+              <strong className="font-mono">{currentYear.year_be}</strong>
+            </>
+          }
+        />
+        <FilterNavProvider>
+          <Card padding="sm" className="mb-4">
+            <ScoreSelector
+              grades={sortedGrades.map((g) => ({ id: g.id, label: g.name_short }))}
+              selectedGradeId={selectedGrade?.id ?? ""}
+              rooms={roomsInGrade.map((r) => ({
+                id: r.id,
+                label: `${selectedGrade!.name_short}/${r.room_number}`,
+              }))}
+              selectedRoomId=""
+              subjects={[]}
+              selectedSubjectId=""
+              tab={requestedTab}
+              basePath={PAGE_BASE}
+            />
+          </Card>
+          <Card variant="dashed" className="p-12 text-center">
+            <p className="text-sm text-zinc-500">
+              {!selectedGrade ? "เลือกระดับชั้นก่อน" : "เลือกห้องเรียนก่อน"}
+            </p>
+          </Card>
+        </FilterNavProvider>
+      </>
+    );
+  }
+
+  // Past this guard, selectedGrade & selectedClassroom are non-null.
   const isPrimary = selectedGrade.system === "primary";
   const tab: Tab = !isPrimary ? defaultTab : requestedTab;
   const semester: 1 | 2 = tab === "2" ? 2 : 1;
   const semesterState =
     tab === "summary" ? "current" : semesterStateOf(semester, currentTerm);
-
-  // 4. Rooms in selected grade
-  const roomsInGrade = (classrooms ?? [])
-    .filter((c) => c.grade_level_id === selectedGrade.id)
-    .sort((a, b) => a.room_number - b.room_number);
-
-  const selectedClassroom =
-    roomsInGrade.find((r) => r.id === params.room) ?? roomsInGrade[0];
 
   // 5. Subject options — FILTER TO pass_fail ONLY. Primary uses
   //    semester=0 (year-wide); secondary uses currentSemester.
@@ -289,10 +337,12 @@ export default async function ActivitiesPage({ searchParams }: Props) {
     hasTeacher: !!offeringBySubject.get(s.id)?.teacher_id,
   }));
 
-  const selectedSubject =
-    sortedSubjects.find((s) => s.id === params.subject) ??
-    sortedSubjects[0] ??
-    null;
+  // Subject — single subject auto-picks; multiple subjects wait for a pick.
+  const selectedSubject = params.subject
+    ? (sortedSubjects.find((s) => s.id === params.subject) ?? null)
+    : sortedSubjects.length === 1
+      ? sortedSubjects[0]
+      : null;
 
   // Auto-create offering if missing — same pattern as score-structure
   if (selectedSubject && !offeringBySubject.has(selectedSubject.id)) {
@@ -371,7 +421,7 @@ export default async function ActivitiesPage({ searchParams }: Props) {
           </Card>
         }
       >
-      {!selectedSubject ? (
+      {sortedSubjects.length === 0 ? (
         <Card variant="dashed" className="p-12 text-center">
           <p className="text-sm text-zinc-500">
             ห้องนี้ยังไม่มีวิชากิจกรรมในแผนการเรียน
@@ -382,6 +432,10 @@ export default async function ActivitiesPage({ searchParams }: Props) {
           >
             ไปเพิ่มวิชากิจกรรมในแผน
           </Link>
+        </Card>
+      ) : !selectedSubject ? (
+        <Card variant="dashed" className="p-12 text-center">
+          <p className="text-sm text-zinc-500">เลือกวิชาก่อน</p>
         </Card>
       ) : tab === "summary" ? (
         <Card variant="dashed" className="p-12 text-center">

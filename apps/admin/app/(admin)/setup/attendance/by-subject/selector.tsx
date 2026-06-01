@@ -84,6 +84,7 @@ export function BySubjectSelector({
           onChange={(e) => navigate({ grade: e.target.value })}
           className="w-32"
         >
+          {!selectedGradeId && <option value="">— เลือกชั้น —</option>}
           {grades.map((g) => (
             <option key={g.id} value={g.id}>
               {g.label}
@@ -100,6 +101,7 @@ export function BySubjectSelector({
             onChange={(e) => navigate({ room: e.target.value })}
             className="w-36"
           >
+            {!selectedRoomId && <option value="">— เลือกห้อง —</option>}
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.label}
@@ -120,13 +122,18 @@ export function BySubjectSelector({
           {subjects.length === 0 ? (
             <option value="">(ไม่มีวิชาในห้องนี้)</option>
           ) : (
-            subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-                {s.credit_hours != null && ` · ${s.credit_hours} นก.`}
-                {!s.hasTeacher && " · (ยังไม่จัดครูเข้าสอน)"}
-              </option>
-            ))
+            <>
+              {!selectedSubjectId && (
+                <option value="">— เลือกวิชา —</option>
+              )}
+              {subjects.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                  {s.credit_hours != null && ` · ${s.credit_hours} นก.`}
+                  {!s.hasTeacher && " · (ยังไม่จัดครูเข้าสอน)"}
+                </option>
+              ))}
+            </>
           )}
         </Select>
       </div>
