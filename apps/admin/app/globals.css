@@ -1521,7 +1521,13 @@
   background: #f4f4f5;
   font-size: 7.5px;
   font-weight: 500;
+  /* min+max pin the column width so single-digit slot numbers (1–9) don't
+     render narrower than the 2-digit ones — table-layout:fixed + width:auto
+     otherwise lets content nudge the column size. User spec 2026-06-01. */
   width: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  box-sizing: border-box;
   padding: 0.05rem;
 }
 /* Dense-slot subjects (5+ slots/week × 10 weeks/page = 50+ slot cols
@@ -1539,6 +1545,8 @@
    หาย ในวิชาที่มี 5 ช่อง/สัปดาห์". */
 .att-table.att-table--dense-slots .att-wk-slot {
   width: 10px;
+  min-width: 10px;
+  max-width: 10px;
   font-size: 6px;
   padding: 0.02rem 0;
 }
@@ -1558,6 +1566,8 @@
    ด้วย เฉพาะวิชาที่ 2.5 หน่วยกิต". */
 .att-page-section .att-table--roomy[data-slots-per-week="5"] .att-wk-slot {
   width: 12px;
+  min-width: 12px;
+  max-width: 12px;
   font-size: 7px;
 }
 /* Student names get a bigger font than other cells for readability —
@@ -2217,6 +2227,9 @@
   .att-table .att-wk-slot {
     font-size: 6.5px;
     width: 14px;
+    min-width: 14px;
+    max-width: 14px;
+    box-sizing: border-box;
   }
   /* Tighter fixed-column widths on print to leave more room for day cells */
   .att-table .att-col-num {
