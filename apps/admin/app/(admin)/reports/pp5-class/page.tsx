@@ -9,12 +9,8 @@ import {
 } from "../../setup/attendance/calendar";
 import { AttendanceSummarySection } from "../../setup/attendance/summary-section";
 import { abbreviateTitle, cutGrade } from "../../setup/score-structure/grading-utils";
-import {
-  NumericTable,
-  PrimaryAnnualSummary,
-  PassFailTable,
-  EvalSection,
-} from "../pp5/page";
+import { NumericTable, PrimaryAnnualSummary, PassFailTable } from "../_shared/score-report";
+import { EvalSection } from "../pp5/page";
 import type { Metadata } from "next";
 import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
