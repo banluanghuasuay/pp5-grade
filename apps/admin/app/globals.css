@@ -851,6 +851,34 @@
 .pp6-sig-line {
   margin-bottom: 0.1rem !important;
 }
+/* สรุปผลการประเมิน — bordered 2-col table in the LEFT summary column.
+   Label cell fills the row; value cell is narrow + right-aligned. The final
+   GPA row spans both columns (centered) via colSpan=2 + .pp6-summary-gpa. */
+.pp6-summary-left .pp6-section-title {
+  margin: 0 0 0.35rem;
+}
+.pp6-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #000;
+}
+.pp6-summary-table td {
+  border: 1px solid #71717a;
+  padding: 0.2rem 0.4rem;
+  vertical-align: middle;
+}
+.pp6-summary-table .pp6-summary-val {
+  width: 26%;
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.pp6-summary-table .pp6-summary-gpa {
+  text-align: center;
+  font-weight: 700;
+}
 
 /* ============================================================
    ตารางเวลาเรียนรายสัปดาห์ (weekly attendance grid)

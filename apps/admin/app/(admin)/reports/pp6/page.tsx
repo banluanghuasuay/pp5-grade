@@ -96,7 +96,13 @@ type NumericSubject = {
   code: string;
   name_th: string;
   category: "core" | "additional" | "activity";
+  /** GPA weight — primary = hours_per_year/40, secondary = credit_hours. */
   weight: number;
+  /** น้ำหนัก COLUMN value — primary = raw hours_per_year, secondary =
+   *  credit_hours. Display only; never used in GPA math. */
+  displayWeight: number;
+  /** Raw hours_per_year (primary), used for the time-based summary sums. */
+  hoursPerYear: number;
   /** offering ids for THIS subject in this classroom (sem1/sem2 for primary). */
   offeringIds: { sem1: string | null; sem2: string | null };
 };
@@ -335,18 +341,30 @@ export default async function Pp6Page({ searchParams }: Props) {
         name_th: s.name_th,
         category: s.category,
         weight: weightOf(s),
+        // Displayed น้ำหนัก: primary shows raw ชั่วโมง/ปี (e.g. 200/160),
+        // secondary shows credit_hours. GPA still uses `weight` above.
+        displayWeight: isPrimary
+          ? (s.hours_per_year ?? 0)
+          : (s.credit_hours ?? 0),
+        hoursPerYear: s.hours_per_year ?? 0,
         offeringIds: { sem1: off.sem1, sem2: off.sem2 },
       });
     }
   }
 
-  // Sort numeric subjects by learning_area sort then code (per spec). Keep
-  // the raw subject's learning_area sort in a side map for the comparator.
+  // Sort numeric subjects: category first (พื้นฐาน/core before เพิ่มเติม/
+  // additional), THEN learning_area sort, THEN code. Keep the raw subject's
+  // learning_area sort in a side map for the comparator.
   const laSortById = new Map<string, number>();
   for (const s of subjectMap.values()) {
     laSortById.set(s.id, s.learning_area?.sort_order ?? 999);
   }
+  // core (พื้นฐาน) ranks before additional (เพิ่มเติม).
+  const categoryRank = (c: NumericSubject["category"]): number =>
+    c === "additional" ? 2 : 1;
   numericSubjects.sort((a, b) => {
+    const cat = categoryRank(a.category) - categoryRank(b.category);
+    if (cat !== 0) return cat;
     const la = (laSortById.get(a.id) ?? 999) - (laSortById.get(b.id) ?? 999);
     if (la !== 0) return la;
     return a.code.localeCompare(b.code);
@@ -573,10 +591,16 @@ export default async function Pp6Page({ searchParams }: Props) {
     /** numeric subject id → { total, grade } */
     numeric: Map<string, StudentSubjectResult>;
     gpa: number;
-    /** Σ weight of core numeric subjects with grade > 0 */
+    /** Σ weight of core numeric subjects with grade > 0 (หน่วยกิต — secondary) */
     coreWeight: number;
-    /** Σ weight of additional numeric subjects with grade > 0 */
+    /** Σ weight of additional numeric subjects with grade > 0 (หน่วยกิต — secondary) */
     additionalWeight: number;
+    /** PRIMARY only — Σ hours_per_year of CORE numeric subjects earned (grade > 0). */
+    coreHours: number;
+    /** PRIMARY only — Σ hours_per_year of ADDITIONAL numeric subjects earned (grade > 0). */
+    additionalHours: number;
+    /** PRIMARY only — Σ hours_per_year of ACTIVITY subjects the student passed. */
+    activityHours: number;
     charSummary: string;
     readingSummary: string;
     activityResult: "pass" | "fail" | null;
@@ -588,17 +612,32 @@ export default async function Pp6Page({ searchParams }: Props) {
     let weightSum = 0;
     let coreWeight = 0;
     let additionalWeight = 0;
+    // PRIMARY time-based sums (Σ hours_per_year of subjects earned). Parallel
+    // to the หน่วยกิต sums above but using the raw annual hours.
+    let coreHours = 0;
+    let additionalHours = 0;
     for (const subj of numericSubjects) {
       const res = subjectGradeFor(subj, stu.id);
       numeric.set(subj.id, res);
       weightedGradeSum += res.grade * subj.weight;
       weightSum += subj.weight;
       if (res.grade > 0) {
-        if (subj.category === "additional") additionalWeight += subj.weight;
-        else coreWeight += subj.weight; // core (พื้นฐาน)
+        if (subj.category === "additional") {
+          additionalWeight += subj.weight;
+          additionalHours += subj.hoursPerYear;
+        } else {
+          coreWeight += subj.weight; // core (พื้นฐาน)
+          coreHours += subj.hoursPerYear;
+        }
       }
     }
     const gpa = weightSum > 0 ? weightedGradeSum / weightSum : 0;
+
+    // PRIMARY — Σ hours_per_year of ACTIVITY subjects this student passed.
+    let activityHours = 0;
+    for (const act of activitySubjects) {
+      if (activityResultFor(act, stu.id) === "pass") activityHours += act.hours;
+    }
 
     // Overall activity result: ผ่าน only if EVERY activity passed; ไม่ผ่าน if
     // any failed; null if the class has activities but this student has no
@@ -625,6 +664,9 @@ export default async function Pp6Page({ searchParams }: Props) {
       gpa,
       coreWeight,
       additionalWeight,
+      coreHours,
+      additionalHours,
+      activityHours,
       charSummary: summaryFromAvg(charAvgByStudent.get(stu.id) ?? null),
       readingSummary: summaryFromAvg(readingAvgByStudent.get(stu.id) ?? null),
       activityResult,
@@ -695,6 +737,7 @@ export default async function Pp6Page({ searchParams }: Props) {
         <Pp6StudentPage
           key={stu.id}
           student={stu}
+          isPrimary={isPrimary}
           rank={rankOf(stu.gpa)}
           numericSubjects={numericSubjects}
           activitySubjects={activitySubjects}
@@ -728,6 +771,7 @@ export default async function Pp6Page({ searchParams }: Props) {
 
 function Pp6StudentPage({
   student,
+  isPrimary,
   rank,
   numericSubjects,
   activitySubjects,
@@ -751,10 +795,14 @@ function Pp6StudentPage({
     gpa: number;
     coreWeight: number;
     additionalWeight: number;
+    coreHours: number;
+    additionalHours: number;
+    activityHours: number;
     charSummary: string;
     readingSummary: string;
     activityResult: "pass" | "fail" | null;
   };
+  isPrimary: boolean;
   rank: number;
   numericSubjects: NumericSubject[];
   activitySubjects: ActivitySubject[];
@@ -771,6 +819,7 @@ function Pp6StudentPage({
   directorTitle: string;
 }) {
   const totalWeight = student.coreWeight + student.additionalWeight;
+  const totalHours = student.coreHours + student.additionalHours;
   const activityOverall =
     student.activityResult === "pass"
       ? "ผ่าน"
@@ -780,6 +829,22 @@ function Pp6StudentPage({
 
   const homeroomJoined =
     homeroomNames.length > 0 ? homeroomNames.join(" / ") : "—";
+
+  // สรุปผลการประเมิน rows — PRIMARY uses time-based wording + ชั่วโมง values
+  // (Σ hours_per_year of subjects earned); SECONDARY keeps the หน่วยกิต
+  // wording + credit-weight values. The activity-hours row is PRIMARY-only.
+  const coreLabel = isPrimary
+    ? "เวลาเรียนวิชาพื้นฐานที่ได้"
+    : "จำนวนหน่วยกิตวิชาพื้นฐานที่ได้";
+  const additionalLabel = isPrimary
+    ? "เวลาเรียนวิชาเพิ่มเติมที่ได้"
+    : "จำนวนหน่วยกิตวิชาเพิ่มเติมที่ได้";
+  const totalLabel = isPrimary ? "รวมเวลาเรียนที่ได้" : "รวมจำนวนหน่วยกิตที่ได้";
+  const coreValue = fmtWeight(isPrimary ? student.coreHours : student.coreWeight);
+  const additionalValue = fmtWeight(
+    isPrimary ? student.additionalHours : student.additionalWeight,
+  );
+  const totalValue = fmtWeight(isPrimary ? totalHours : totalWeight);
 
   return (
     <section className="pp5-page-content pp6-page">
@@ -865,7 +930,7 @@ function Pp6StudentPage({
                   <td>
                     {subj.category === "additional" ? "เพิ่มเติม" : "พื้นฐาน"}
                   </td>
-                  <td>{fmtWeight(subj.weight)}</td>
+                  <td>{fmtWeight(subj.displayWeight)}</td>
                   <td>{fmtScoreInt(res.total)}</td>
                   <td>{fmtGradeLevel(res.grade)}</td>
                 </tr>
@@ -929,36 +994,52 @@ function Pp6StudentPage({
         </tbody>
       </table>
 
-      {/* 5. Summary block — left labels, right signatures. */}
+      {/* 5. Summary block — left = สรุปผลการประเมิน table, right = signatures. */}
       <div className="pp6-summary">
         <div className="pp6-summary-left">
-          <p>
-            จำนวนหน่วยกิต/น้ำหนักวิชาพื้นฐานที่ได้{" "}
-            <strong>{fmtWeight(student.coreWeight)}</strong>
-          </p>
-          <p>
-            จำนวนหน่วยกิต/น้ำหนักวิชาเพิ่มเติมที่ได้{" "}
-            <strong>{fmtWeight(student.additionalWeight)}</strong>
-          </p>
-          <p>
-            รวมจำนวนหน่วยกิต/น้ำหนักที่ได้{" "}
-            <strong>{fmtWeight(totalWeight)}</strong>
-          </p>
-          <p>
-            ผลการประเมินคุณลักษณะอันพึงประสงค์{" "}
-            <strong>{student.charSummary}</strong>
-          </p>
-          <p>
-            ผลการประเมินการอ่าน คิด วิเคราะห์และเขียน{" "}
-            <strong>{student.readingSummary}</strong>
-          </p>
-          <p>
-            ผลการประเมินกิจกรรมพัฒนาผู้เรียน <strong>{activityOverall}</strong>
-          </p>
-          <p>
-            ผลการเรียนเฉลี่ย (GPA) <strong>{student.gpa.toFixed(2)}</strong>{" "}
-            ได้อันดับที่ <strong>{rank}</strong> ของห้อง
-          </p>
+          <h2 className="pp6-section-title">สรุปผลการประเมิน</h2>
+          <table className="pp6-summary-table">
+            <tbody>
+              <tr>
+                <td>{coreLabel}</td>
+                <td className="pp6-summary-val">{coreValue}</td>
+              </tr>
+              <tr>
+                <td>{additionalLabel}</td>
+                <td className="pp6-summary-val">{additionalValue}</td>
+              </tr>
+              <tr>
+                <td>{totalLabel}</td>
+                <td className="pp6-summary-val">{totalValue}</td>
+              </tr>
+              {isPrimary && (
+                <tr>
+                  <td>เวลาเรียนวิชากิจกรรมพัฒนาผู้เรียนที่ได้</td>
+                  <td className="pp6-summary-val">
+                    {fmtWeight(student.activityHours)}
+                  </td>
+                </tr>
+              )}
+              <tr>
+                <td>ผลการประเมินคุณลักษณะอันพึงประสงค์</td>
+                <td className="pp6-summary-val">{student.charSummary}</td>
+              </tr>
+              <tr>
+                <td>ผลการประเมินการอ่าน คิด วิเคราะห์และเขียน</td>
+                <td className="pp6-summary-val">{student.readingSummary}</td>
+              </tr>
+              <tr>
+                <td>ผลการประเมินกิจกรรมพัฒนาผู้เรียน</td>
+                <td className="pp6-summary-val">{activityOverall}</td>
+              </tr>
+              <tr>
+                <td colSpan={2} className="pp6-summary-gpa">
+                  ผลการเรียนเฉลี่ย (GPA) {student.gpa.toFixed(2)} ได้อันดับที่{" "}
+                  {rank} ของห้อง
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
         <div className="pp6-summary-right">
           <div className="pp6-sig-block">
