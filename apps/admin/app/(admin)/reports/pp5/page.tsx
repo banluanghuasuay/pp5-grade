@@ -11,6 +11,7 @@ import { type HeaderInfo, Pp5Frame, NumericTable, PrimaryAnnualSummary, PassFail
 import { Pp5SelectorForm } from "./pp5-selector-form";
 import type { Metadata } from "next";
 import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
+import { withSchoolPrefix } from "@/lib/school-name";
 import { getTeacherScope } from "@/lib/teacher-scope";
 
 export async function generateMetadata({
@@ -1134,7 +1135,7 @@ function Pp5Cover({
           />
         )}
         <h1 className="pp5-cover-title">แบบบันทึกผลการเรียนประจำรายวิชา</h1>
-        <p className="pp5-cover-school">โรงเรียน{info.schoolName}</p>
+        <p className="pp5-cover-school">{withSchoolPrefix(info.schoolName)}</p>
         <p className="pp5-cover-affiliation">
           อำเภอ{info.district ?? blank}
           {"  "}จังหวัด{info.province ?? blank}
@@ -1432,7 +1433,7 @@ function Pp5Cover({
               </p>
               <p>ลงชื่อ ............................................</p>
               <p className="pp5-cover-sig-name">( {info.directorName} )</p>
-              <p>{info.directorTitle}โรงเรียน{info.schoolName}</p>
+              <p>{info.directorTitle}{withSchoolPrefix(info.schoolName)}</p>
             </div>
           </div>
         </div>
@@ -1450,7 +1451,7 @@ function Pp5Cover({
               </p>
               <p>ลงชื่อ ............................................</p>
               <p className="pp5-cover-sig-name">( {info.directorName} )</p>
-              <p>{info.directorTitle}โรงเรียน{info.schoolName}</p>
+              <p>{info.directorTitle}{withSchoolPrefix(info.schoolName)}</p>
             </div>
           </div>
         </div>
@@ -2217,7 +2218,7 @@ function EvalReportPage({
           )}
           <h1>{title}</h1>
           {!compact && (
-            <p className="pp5-school-name">โรงเรียน{info.schoolName}</p>
+            <p className="pp5-school-name">{withSchoolPrefix(info.schoolName)}</p>
           )}
         </div>
         <p className="pp5-meta-line">

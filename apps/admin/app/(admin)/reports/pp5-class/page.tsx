@@ -12,6 +12,7 @@ import { abbreviateTitle, cutGrade } from "../../setup/score-structure/grading-u
 import { NumericTable, PrimaryAnnualSummary, PassFailTable } from "../_shared/score-report";
 import { EvalSection } from "../pp5/page";
 import type { Metadata } from "next";
+import { withSchoolPrefix } from "@/lib/school-name";
 import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
 import {
@@ -1314,7 +1315,7 @@ function Pp5ClassMonthlyAttendance({
         </h2>
         <p className="att-page-meta">
           <span>{classLabel}</span>
-          {schoolName && <span>โรงเรียน{schoolName}</span>}
+          {schoolName && <span>{withSchoolPrefix(schoolName)}</span>}
           <span>วันทำการ {workdays.size} วัน</span>
         </p>
       </div>
@@ -1522,7 +1523,7 @@ function Pp5ClassCover({
             Line 1: ชื่อโรงเรียน + อำเภอ + จังหวัด
             Line 2: สังกัด (affiliation) */}
       <p className="pp5-class-school">
-        โรงเรียน{school?.name_th ?? "—"}
+        {withSchoolPrefix(school?.name_th) || "—"}
         {school?.district ? `   อำเภอ${school.district}` : ""}
         {school?.province ? `   จังหวัด${school.province}` : ""}
       </p>
@@ -1820,7 +1821,7 @@ function Pp5ClassCover({
                   </p>
                   <p className="pp5-class-sig-role">
                     {school?.director_title ?? "ผู้อำนวยการ"}
-                    {school?.name_th ? `โรงเรียน${school.name_th}` : ""}
+                    {withSchoolPrefix(school?.name_th)}
                   </p>
                 </div>
               </div>

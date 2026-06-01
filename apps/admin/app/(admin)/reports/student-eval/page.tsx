@@ -4,6 +4,7 @@ import { abbreviateTitle } from "../../setup/score-structure/grading-utils";
 import { PrintButton } from "../pp5/print-button";
 import type { Metadata } from "next";
 import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
+import { withSchoolPrefix } from "@/lib/school-name";
 
 export async function generateMetadata({
   searchParams,
@@ -430,7 +431,7 @@ export default async function StudentEvalReportPage({ searchParams }: Props) {
             )}
             <h1>{title}</h1>
             <p className="pp5-school-name">
-              โรงเรียน{school?.name_th ?? "—"}
+              {withSchoolPrefix(school?.name_th) || "—"}
             </p>
           </div>
           <p className="pp5-meta-line">

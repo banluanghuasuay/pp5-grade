@@ -10,6 +10,7 @@ import {
 } from "../../setup/score-structure/grading-utils";
 import { ensureCategorySlots } from "../../setup/score-structure/actions";
 import { PrintButton } from "../pp5/print-button";
+import { withSchoolPrefix } from "@/lib/school-name";
 import { AutoPrint } from "./auto-print";
 import type { Metadata } from "next";
 import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
@@ -360,7 +361,7 @@ export default async function GradeSummaryReportPage({ searchParams }: Props) {
             )}
             <h1>แบบบันทึกสรุปผลการเรียน</h1>
             <p className="pp5-school-name">
-              โรงเรียน{school?.name_th ?? "—"}
+              {withSchoolPrefix(school?.name_th) || "—"}
             </p>
           </div>
           <p className="pp5-meta-line">

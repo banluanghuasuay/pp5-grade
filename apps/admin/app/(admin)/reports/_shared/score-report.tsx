@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cutGrade, averageTwoSemesters } from "../../setup/score-structure/grading-utils";
 import { PrintButton } from "../pp5/print-button";
+import { withSchoolPrefix } from "@/lib/school-name";
 
 // ===================================================================
 // Page frame — applies print styling + header
@@ -734,7 +735,7 @@ export function Pp5SimpleHeader({
           />
         )}
         <h1>แบบบันทึกผลการเรียนประจำรายวิชา</h1>
-        <p className="pp5-school-name">โรงเรียน{info.schoolName}</p>
+        <p className="pp5-school-name">{withSchoolPrefix(info.schoolName)}</p>
       </div>
       {/* Single-line subject meta — uses flex+gap so the segments stay
           visually separated even when the browser collapses whitespace. */}
