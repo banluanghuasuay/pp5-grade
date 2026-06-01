@@ -3,6 +3,7 @@
 import { Select } from "@pp5/ui";
 import { useRouter } from "next/navigation";
 import { useFilterNav } from "../_components/filter-nav-context";
+import { useOptimisticValue } from "../_components/use-optimistic-value";
 
 export type GradeOption = { id: string; label: string };
 export type RoomOption = { id: string; label: string };
@@ -50,6 +51,11 @@ export function ScoreSelector({
 }: Props) {
   const router = useRouter();
   const { startNav } = useFilterNav();
+  // Optimistic mirrors so each dropdown snaps to the picked value instantly,
+  // instead of waiting for the RSC navigation to commit.
+  const [gradeVal, setGradeOpt] = useOptimisticValue(selectedGradeId);
+  const [roomVal, setRoomOpt] = useOptimisticValue(selectedRoomId);
+  const [subjectVal, setSubjectOpt] = useOptimisticValue(selectedSubjectId);
 
   const navigate = (
     grade: string,
@@ -71,11 +77,14 @@ export function ScoreSelector({
       <div className="flex items-center gap-2">
         <label className="text-sm font-medium text-zinc-700">ระดับชั้น:</label>
         <Select
-          value={selectedGradeId}
-          onChange={(e) => navigate(e.target.value, "", "", tab)}
+          value={gradeVal}
+          onChange={(e) => {
+            setGradeOpt(e.target.value);
+            navigate(e.target.value, "", "", tab);
+          }}
           className="w-32"
         >
-          {!selectedGradeId && <option value="">— เลือกชั้น —</option>}
+          {!gradeVal && <option value="">— เลือกชั้น —</option>}
           {grades.map((g) => (
             <option key={g.id} value={g.id}>
               {g.label}
@@ -88,13 +97,14 @@ export function ScoreSelector({
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-zinc-700">เลือกห้อง:</label>
           <Select
-            value={selectedRoomId}
-            onChange={(e) =>
-              navigate(selectedGradeId, e.target.value, "", tab)
-            }
+            value={roomVal}
+            onChange={(e) => {
+              setRoomOpt(e.target.value);
+              navigate(selectedGradeId, e.target.value, "", tab);
+            }}
             className="w-36"
           >
-            {!selectedRoomId && <option value="">— เลือกห้อง —</option>}
+            {!roomVal && <option value="">— เลือกห้อง —</option>}
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.label}
@@ -107,10 +117,11 @@ export function ScoreSelector({
       <div className="flex flex-1 items-center gap-2">
         <label className="text-sm font-medium text-zinc-700">รายวิชา:</label>
         <Select
-          value={selectedSubjectId}
-          onChange={(e) =>
-            navigate(selectedGradeId, selectedRoomId, e.target.value, tab)
-          }
+          value={subjectVal}
+          onChange={(e) => {
+            setSubjectOpt(e.target.value);
+            navigate(selectedGradeId, selectedRoomId, e.target.value, tab);
+          }}
           className="min-w-[280px] flex-1"
           disabled={subjects.length === 0}
         >
@@ -118,7 +129,7 @@ export function ScoreSelector({
             <option value="">— ไม่มีวิชาในห้องนี้ —</option>
           ) : (
             <>
-              {!selectedSubjectId && (
+              {!subjectVal && (
                 <option value="">— เลือกวิชา —</option>
               )}
               {subjects.map((s) => (

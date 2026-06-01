@@ -3,6 +3,7 @@
 import { Select } from "@pp5/ui";
 import { useRouter } from "next/navigation";
 import { useFilterNav } from "../_components/filter-nav-context";
+import { useOptimisticValue } from "../_components/use-optimistic-value";
 import { ChangePlanButton } from "./change-plan-button";
 
 export type GradeOption = { id: string; label: string };
@@ -40,6 +41,10 @@ export function ClassroomSelector({
   const router = useRouter();
   // Fire the table skeleton at 0ms on selection — see filter-nav-context.
   const { startNav } = useFilterNav();
+  // Optimistic mirrors so each dropdown snaps to the picked value instantly,
+  // instead of waiting for the RSC navigation to commit.
+  const [gradeVal, setGradeOpt] = useOptimisticValue(selectedGradeId);
+  const [roomVal, setRoomOpt] = useOptimisticValue(selectedRoomId);
 
   const navigate = (nextGrade: string, nextRoom: string) => {
     startNav();
@@ -63,11 +68,14 @@ export function ClassroomSelector({
       <div className="flex items-center gap-2">
         <label className="text-sm font-medium text-zinc-700">เลือกชั้น:</label>
         <Select
-          value={selectedGradeId}
-          onChange={(e) => onGradeChange(e.target.value)}
+          value={gradeVal}
+          onChange={(e) => {
+            setGradeOpt(e.target.value);
+            onGradeChange(e.target.value);
+          }}
           className="w-32"
         >
-          {!selectedGradeId && <option value="">— เลือกชั้น —</option>}
+          {!gradeVal && <option value="">— เลือกชั้น —</option>}
           {grades.map((g) => (
             <option key={g.id} value={g.id}>
               {g.label}
@@ -80,11 +88,14 @@ export function ClassroomSelector({
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-zinc-700">เลือกห้อง:</label>
           <Select
-            value={selectedRoomId}
-            onChange={(e) => onRoomChange(e.target.value)}
+            value={roomVal}
+            onChange={(e) => {
+              setRoomOpt(e.target.value);
+              onRoomChange(e.target.value);
+            }}
             className="w-36"
           >
-            {!selectedRoomId && <option value="">— เลือกห้อง —</option>}
+            {!roomVal && <option value="">— เลือกห้อง —</option>}
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.label}
