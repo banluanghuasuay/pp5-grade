@@ -235,7 +235,9 @@ export default async function Pp6Page({ searchParams }: Props) {
     .order("role");
   const homeroomNames = (homerooms ?? [])
     .filter((h) => h.teacher?.user)
-    .map((h) => `${h.teacher!.user!.title ?? ""}${h.teacher!.user!.full_name}`);
+    // No title prefix on the signature line — "นาย/นาง…" makes the name wrap
+    // to a 2nd line in the tight signature cell, especially with 2 teachers.
+    .map((h) => h.teacher!.user!.full_name);
   const homeroomLabel =
     homeroomNames.length > 0 ? homeroomNames.join(" · ") : null;
 
@@ -1073,7 +1075,11 @@ function Pp6StudentPage({
         </div>
         <div className="pp6-summary-right">
           <div className="pp6-sig-block">
-            <p className="pp6-sig-line">..................................</p>
+            <p className="pp6-sig-line">
+              {homeroomNames.length > 1
+                ? "................................................................."
+                : ".................................."}
+            </p>
             <p>( {homeroomJoined} )</p>
             <p>ครูประจำชั้น{gradeName}</p>
           </div>
