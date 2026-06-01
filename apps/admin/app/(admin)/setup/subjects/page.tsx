@@ -187,9 +187,42 @@ export default async function SubjectsPage({ searchParams }: Props) {
     );
   }
 
-  // 4. Pick selected grade (?grade=<id> or first open grade)
-  const selectedGrade =
-    openGrades.find((g) => g.id === gradeParam) ?? openGrades[0];
+  // 4. Pick selected grade — select-first: no auto-pick, admin must choose.
+  const selectedGrade = gradeParam
+    ? (openGrades.find((g) => g.id === gradeParam) ?? null)
+    : null;
+
+  // EARLY GUARD — pick ชั้น before showing or auto-creating any plan/subjects.
+  if (!selectedGrade) {
+    return (
+      <>
+        <PageHeader
+          icon={BookOpen}
+          iconBg="bg-amber-100 text-amber-700"
+          title="จัดการวิชา"
+          description={
+            <>
+              แผนการเรียน + รายวิชาในหลักสูตร · ปีปัจจุบัน{" "}
+              <strong className="font-mono">{currentYear.year_be}</strong>
+            </>
+          }
+        />
+        <FilterNavProvider>
+          <div className="mb-6">
+            <GradeRoomSelector
+              grades={openGrades.map((g) => ({ id: g.id, label: g.name_short }))}
+              selectedGradeId=""
+              rooms={[]}
+              selectedPlanId=""
+            />
+          </div>
+          <Card variant="dashed" className="p-12 text-center">
+            <p className="text-sm text-zinc-500">เลือกระดับชั้นก่อน</p>
+          </Card>
+        </FilterNavProvider>
+      </>
+    );
+  }
 
   // Effective semester scope for subjects shown on this page:
   //   primary  → 0 (year-wide)

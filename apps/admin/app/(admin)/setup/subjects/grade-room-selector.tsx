@@ -86,6 +86,7 @@ export function GradeRoomSelector({
           disabled={isPending}
           className="w-32"
         >
+          {!selectedGradeId && <option value="">— เลือกชั้น —</option>}
           {grades.map((g) => (
             <option key={g.id} value={g.id}>
               {g.label}

@@ -129,18 +129,61 @@ export default async function TeachingPage({ searchParams }: Props) {
     );
   }
 
-  // 3. Resolve selected grade (param or first)
-  const selectedGrade =
-    sortedGrades.find((g) => g.id === params.grade) ?? sortedGrades[0];
+  // 3. Resolve grade — select-first: no auto-pick, admin must choose.
+  const selectedGrade = params.grade
+    ? (sortedGrades.find((g) => g.id === params.grade) ?? null)
+    : null;
 
-  // 4. Rooms in selected grade (sorted by room_number)
-  const roomsInGrade = (classrooms ?? [])
-    .filter((c) => c.grade_level_id === selectedGrade.id)
-    .sort((a, b) => a.room_number - b.room_number);
+  // 4. Rooms — single-room auto-picks; multi-room waits.
+  const roomsInGrade = selectedGrade
+    ? (classrooms ?? [])
+        .filter((c) => c.grade_level_id === selectedGrade.id)
+        .sort((a, b) => a.room_number - b.room_number)
+    : [];
+  const selectedClassroom = params.room
+    ? (roomsInGrade.find((r) => r.id === params.room) ?? null)
+    : roomsInGrade.length === 1
+      ? roomsInGrade[0]
+      : null;
 
-  // 5. Resolve selected room (param or first)
-  const selectedClassroom =
-    roomsInGrade.find((r) => r.id === params.room) ?? roomsInGrade[0];
+  // EARLY GUARD — pick ชั้น (+ ห้อง) before reading offerings/teachers.
+  if (!selectedGrade || !selectedClassroom) {
+    return (
+      <>
+        <PageHeader
+          icon={ClipboardCheck}
+          iconBg="bg-teal-100 text-teal-700"
+          title="จัดครูเข้าสอน"
+          description={
+            <>
+              มอบหมายครูสอนแต่ละวิชาในแต่ละห้อง · ปีปัจจุบัน{" "}
+              <strong className="font-mono">{currentYear.year_be}</strong>
+            </>
+          }
+        />
+        <FilterNavProvider>
+          <div className="mb-6">
+            <ClassroomSelector
+              grades={sortedGrades.map((g) => ({ id: g.id, label: g.name_short }))}
+              selectedGradeId={selectedGrade?.id ?? ""}
+              rooms={roomsInGrade.map((r) => ({
+                id: r.id,
+                label: `${selectedGrade!.name_short}/${r.room_number}`,
+              }))}
+              selectedRoomId=""
+              plans={[]}
+              selectedPlanId=""
+            />
+          </div>
+          <Card variant="dashed" className="p-12 text-center">
+            <p className="text-sm text-zinc-500">
+              {!selectedGrade ? "เลือกชั้นก่อน" : "เลือกห้องเรียนก่อน"}
+            </p>
+          </Card>
+        </FilterNavProvider>
+      </>
+    );
+  }
 
   // Subjects are now scoped per (academic_year_id, semester):
   //   primary   → semester=0 (year-wide; one set used for both terms)

@@ -67,6 +67,7 @@ export function ClassroomSelector({
           onChange={(e) => onGradeChange(e.target.value)}
           className="w-32"
         >
+          {!selectedGradeId && <option value="">— เลือกชั้น —</option>}
           {grades.map((g) => (
             <option key={g.id} value={g.id}>
               {g.label}
@@ -83,6 +84,7 @@ export function ClassroomSelector({
             onChange={(e) => onRoomChange(e.target.value)}
             className="w-36"
           >
+            {!selectedRoomId && <option value="">— เลือกห้อง —</option>}
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.label}
