@@ -392,8 +392,8 @@ export default async function GradeSummaryReportPage({ searchParams }: Props) {
               <th className="pp5-col-num">ที่</th>
               <th className="pp5-col-code">รหัสประจำตัว</th>
               <th className="pp5-col-name">ชื่อ – สกุล</th>
-              <th>ภาค 1</th>
-              <th>ภาค 2</th>
+              <th>ภาคเรียนที่ 1</th>
+              <th>ภาคเรียนที่ 2</th>
               <th>{isPrimary ? "เฉลี่ยรายปี" : "รวม"}</th>
               <th className="pp5-col-grade">เกรด</th>
             </tr>

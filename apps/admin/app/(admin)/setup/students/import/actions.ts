@@ -480,7 +480,7 @@ export async function parseStudentImport(
     // each row's destination term at a glance.
     partial.classroom_label =
       resolvedClassroom.system === "secondary"
-        ? `${resolvedClassroom.label} ภาค ${partial.semester}`
+        ? `${resolvedClassroom.label} ภาคเรียนที่ ${partial.semester}`
         : resolvedClassroom.label;
 
     // 4. Duplicate checks

@@ -84,7 +84,7 @@ export default async function ScoresPage({ searchParams }: Props) {
           icon={ClipboardList}
           iconBg="bg-violet-100 text-violet-700"
           title="บันทึกคะแนน"
-          description="ตั้งคะแนนเต็ม + กรอกคะแนนนักเรียน · ภาค 1 / ภาค 2 / สรุปผล"
+          description="ตั้งคะแนนเต็ม + กรอกคะแนนนักเรียน · ภาคเรียนที่ 1 / ภาคเรียนที่ 2 / สรุปผล"
         />
         <Card variant="warning" padding="sm" className="text-sm text-amber-900">
           ⚠️ ยังไม่มีปีการศึกษาปัจจุบัน ·{" "}

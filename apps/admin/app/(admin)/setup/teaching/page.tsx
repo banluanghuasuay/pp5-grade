@@ -426,7 +426,7 @@ async function TeachingTableSection({
           <span className="ml-2 text-xs font-normal text-zinc-500">
             ({subjectRows.length} วิชา ·{" "}
             {subjectRows.filter((s) => s.assignedTeacherId).length}{" "}
-            กำหนดครูแล้ว · ใช้ครูเดียวกันทั้ง ภาค 1 และ ภาค 2)
+            กำหนดครูแล้ว · ใช้ครูเดียวกันทั้ง ภาคเรียนที่ 1 และ ภาคเรียนที่ 2)
           </span>
         </h3>
       </div>

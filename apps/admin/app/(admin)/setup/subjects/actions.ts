@@ -885,10 +885,10 @@ export async function getCloneSubjectsPreview(
   const sourceSubjects = sourceSubjectsRaw ?? [];
 
   const sourceLabel = scope.isSecondary
-    ? `${scope.sourceYearBe} ภาค ${scope.sourceSemester}`
+    ? `${scope.sourceYearBe} ภาคเรียนที่ ${scope.sourceSemester}`
     : `${scope.sourceYearBe}`;
   const targetLabel = scope.isSecondary
-    ? `${scope.currentYearBe} ภาค ${scope.targetSemester}`
+    ? `${scope.currentYearBe} ภาคเรียนที่ ${scope.targetSemester}`
     : `${scope.currentYearBe}`;
 
   if (!sourceSubjects || sourceSubjects.length === 0) {

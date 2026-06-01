@@ -142,7 +142,7 @@ export async function getEnrollmentsToDelete(
     ok: true,
     ids: (enrollments ?? []).map((e) => e.id),
     scopeLabel: isSecondary
-      ? `${scopeLabel} (ภาค ${currentSemester})`
+      ? `${scopeLabel} (ภาคเรียนที่ ${currentSemester})`
       : scopeLabel,
   };
 }

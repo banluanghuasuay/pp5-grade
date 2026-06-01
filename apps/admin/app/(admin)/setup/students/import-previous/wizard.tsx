@@ -458,12 +458,12 @@ function ReviewStep({
           จาก{" "}
           <strong className="font-mono">
             {preview.source.year_be}
-            {preview.source.semester > 0 ? ` ภาค ${preview.source.semester}` : ""}
+            {preview.source.semester > 0 ? ` ภาคเรียนที่ ${preview.source.semester}` : ""}
           </strong>{" "}
           → ไป{" "}
           <strong className="font-mono">
             {preview.target.year_be}
-            {preview.target.semester > 0 ? ` ภาค ${preview.target.semester}` : ""}
+            {preview.target.semester > 0 ? ` ภาคเรียนที่ ${preview.target.semester}` : ""}
           </strong>{" "}
           · นักเรียนทั้งหมด <strong>{preview.rows.length}</strong> คน
         </p>
