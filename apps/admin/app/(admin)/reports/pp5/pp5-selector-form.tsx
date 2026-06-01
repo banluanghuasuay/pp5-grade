@@ -320,7 +320,7 @@ export function Pp5SelectorForm({ classrooms, defaultSemester }: Props) {
                     setRoomId(newRooms[0]?.id ?? "");
                     setSubjectId(""); // reset — must re-pick subject
                   }}
-                  className="rounded-md border border-zinc-300 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none"
+                  className="w-full min-w-0 rounded-md border border-zinc-300 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none"
                 >
                   {grades.map((g) => (
                     <option key={g.id} value={g.id}>
@@ -339,7 +339,7 @@ export function Pp5SelectorForm({ classrooms, defaultSemester }: Props) {
                       setRoomId(e.target.value);
                       setSubjectId("");
                     }}
-                    className="rounded-md border border-zinc-300 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none"
+                    className="w-full min-w-0 rounded-md border border-zinc-300 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none"
                   >
                     {rooms.map((r) => (
                       <option key={r.id} value={r.id}>
@@ -359,7 +359,7 @@ export function Pp5SelectorForm({ classrooms, defaultSemester }: Props) {
                   value={subjectId}
                   onChange={(e) => setSubjectId(e.target.value)}
                   disabled={subjects.length === 0}
-                  className="rounded-md border border-zinc-300 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-50"
+                  className="w-full min-w-0 rounded-md border border-zinc-300 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-50"
                 >
                   <option value="">
                     {subjects.length === 0

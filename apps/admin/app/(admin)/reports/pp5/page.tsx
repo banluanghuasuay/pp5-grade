@@ -1647,7 +1647,11 @@ function AttendanceWeeklyGridSection({
       : Math.max(30, ...students.map((s) => s.student_number));
   // Roomy mode for ≤30 students (taller rows; same pattern as score
   // recording tables — user spec 2026-05-19).
-  const attTableClass = `att-table${PADDED_ROW_COUNT === 30 ? " att-table--roomy" : ""}`;
+  // 5+ slots/week = 50+ slot columns, which overflow the A4 paper-box even at
+  // 14px → switch to the dense tier (10px slots + narrower lead cols). User
+  // spec 2026-06-01 ("เฉพาะวิชาที่มี 5 ช่อง/สัปดาห์").
+  const denseSlots = slotsPerWeek >= 5;
+  const attTableClass = `att-table${denseSlots ? " att-table--dense-slots" : ""}${PADDED_ROW_COUNT === 30 ? " att-table--roomy" : ""}`;
 
   return (
     <>
