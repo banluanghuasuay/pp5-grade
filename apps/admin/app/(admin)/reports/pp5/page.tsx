@@ -904,6 +904,42 @@ export default async function Pp5Page({ searchParams }: Props) {
     });
   }
 
+  // Whole-year attendance summary (primary only) — merge both semesters'
+  // per-student counts so the bundle can end with a สรุปทั้งปี table.
+  // User spec 2026-06-01.
+  const annualAttendance =
+    isPrimary && attendanceList.length === 2
+      ? (() => {
+          const merged = new Map<
+            string,
+            { present: number; absent: number; leave: number; pct: number }
+          >();
+          for (const a of attendanceList) {
+            for (const [sid, c] of a.attendancePayload.summaryByStudent) {
+              const m = merged.get(sid) ?? {
+                present: 0,
+                absent: 0,
+                leave: 0,
+                pct: 0,
+              };
+              m.present += c.present;
+              m.absent += c.absent;
+              m.leave += c.leave;
+              merged.set(sid, m);
+            }
+          }
+          const totalSlots = attendanceList.reduce(
+            (sum, a) => sum + a.attendancePayload.totalSlots,
+            0,
+          );
+          for (const m of merged.values()) {
+            m.pct =
+              totalSlots > 0 ? Math.round((m.present / totalSlots) * 100) : 0;
+          }
+          return { totalSlots, summaryByStudent: merged };
+        })()
+      : null;
+
   const { data: scalesData } = await supabase
     .from("grade_scales")
     .select("min_score, max_score, grade")
@@ -1012,6 +1048,17 @@ export default async function Pp5Page({ searchParams }: Props) {
           )}
         </Fragment>
       ))}
+      {/* สรุปเวลาเรียนทั้งปี — primary only, merges both semesters into one
+          summary table after the per-semester ones. */}
+      {parts.attendance && annualAttendance && (
+        <AttendanceSummarySection
+          students={students}
+          info={headerInfo}
+          semester="annual"
+          totalSlots={annualAttendance.totalSlots}
+          summaryByStudent={annualAttendance.summaryByStudent}
+        />
+      )}
       {parts.scores &&
         (isPrimary && primaryBundles ? (
           // PRIMARY scores — output depends on the print MODE:
@@ -1891,8 +1938,8 @@ function AttendanceSummarySection({
   /** When set (primary 2-semester bundle), the title gets " ภาคเรียนที่ N"
    *  and the meta row shows this semester instead of info.semester. When
    *  undefined (secondary / legacy), renders exactly as before using
-   *  info.semester. */
-  semester?: 1 | 2;
+   *  info.semester. `"annual"` = the merged whole-year summary (sem1+sem2). */
+  semester?: 1 | 2 | "annual";
 }) {
   if (totalSlots === 0 || students.length === 0) return null;
   // Effective semester for the meta row — falls back to the document-level
@@ -1908,7 +1955,11 @@ function AttendanceSummarySection({
       <header className="att-page-header">
         <h1 className="att-page-title">
           สรุปเวลาเรียนรายวิชา {info.classLabel}
-          {semester ? ` ภาคเรียนที่ ${semester}` : ""}
+          {semester === "annual"
+            ? " (สรุปทั้งปี)"
+            : semester
+              ? ` ภาคเรียนที่ ${semester}`
+              : ""}
         </h1>
         <div className="att-page-meta">
           <span>
@@ -1918,7 +1969,13 @@ function AttendanceSummarySection({
             รายวิชา <strong>{info.subjectName}</strong>
           </span>
           <span>
-            ภาคเรียนที่ <strong>{sectionSemester}</strong>
+            {semester === "annual" ? (
+              <strong>ทั้งปีการศึกษา</strong>
+            ) : (
+              <>
+                ภาคเรียนที่ <strong>{sectionSemester}</strong>
+              </>
+            )}
           </span>
           <span>
             ปีการศึกษา <strong>{info.yearBe}</strong>
