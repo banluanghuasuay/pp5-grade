@@ -3,6 +3,7 @@
 import { Select } from "@pp5/ui";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFilterNav } from "../_components/filter-nav-context";
+import { useOptimisticValue } from "../_components/use-optimistic-value";
 
 const POSITION_OPTIONS = [
   { value: "", label: "ทุกตำแหน่ง" },
@@ -42,6 +43,9 @@ export function TeachersFilters({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { startNav } = useFilterNav();
+  const [posVal, setPosOpt] = useOptimisticValue(position);
+  const [deptVal, setDeptOpt] = useOptimisticValue(department);
+  const [statusVal, setStatusOpt] = useOptimisticValue(status);
 
   const setParam = (key: string, value: string, defaultValue = "") => {
     startNav();
@@ -57,8 +61,11 @@ export function TeachersFilters({
       <label className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
         <span className="text-xs font-medium text-zinc-600">ตำแหน่ง</span>
         <Select
-          value={position}
-          onChange={(e) => setParam("position", e.target.value)}
+          value={posVal}
+          onChange={(e) => {
+            setPosOpt(e.target.value);
+            setParam("position", e.target.value);
+          }}
           className="w-full sm:w-40"
         >
           {POSITION_OPTIONS.map((o) => (
@@ -74,8 +81,11 @@ export function TeachersFilters({
       <label className="flex min-w-0 flex-[1.6] flex-col gap-1 sm:flex-none">
         <span className="text-xs font-medium text-zinc-600">กลุ่มสาระ</span>
         <Select
-          value={department}
-          onChange={(e) => setParam("department", e.target.value)}
+          value={deptVal}
+          onChange={(e) => {
+            setDeptOpt(e.target.value);
+            setParam("department", e.target.value);
+          }}
           className="w-full sm:w-64"
         >
           <option value="">ทุกกลุ่มสาระ</option>
@@ -92,8 +102,11 @@ export function TeachersFilters({
       <label className="flex min-w-0 flex-[0.7] flex-col gap-1 sm:flex-none">
         <span className="text-xs font-medium text-zinc-600">สถานะ</span>
         <Select
-          value={status}
-          onChange={(e) => setParam("status", e.target.value, "active")}
+          value={statusVal}
+          onChange={(e) => {
+            setStatusOpt(e.target.value);
+            setParam("status", e.target.value, "active");
+          }}
           className="w-full sm:w-32"
         >
           {STATUS_OPTIONS.map((o) => (
