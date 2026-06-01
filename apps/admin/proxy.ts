@@ -31,6 +31,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Exclude PWA assets (manifest.webmanifest, sw.js) so the browser can
+    // fetch them anonymously — otherwise the auth proxy 307-redirects them
+    // to /login and the app can't be installed.
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
