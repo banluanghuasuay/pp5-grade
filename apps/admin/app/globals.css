@@ -1457,13 +1457,13 @@
   font-weight: 600;
 }
 .att-table .att-col-num {
-  width: 26px;
+  width: 18px;
 }
 .att-table .att-col-code {
   width: 64px;
 }
 .att-table .att-col-name {
-  width: 110px;
+  width: 115px;
   text-align: left;
 }
 .att-table .att-name {
@@ -1474,10 +1474,10 @@
   text-overflow: ellipsis;
 }
 .att-table .att-col-sum {
-  width: 32px;
+  width: 24px;
 }
 .att-table .att-col-pct {
-  width: 72px;
+  width: 44px;
 }
 .att-table .att-day-head,
 .att-table .att-day {
@@ -1524,9 +1524,12 @@
   /* min+max pin the column width so single-digit slot numbers (1–9) don't
      render narrower than the 2-digit ones — table-layout:fixed + width:auto
      otherwise lets content nudge the column size. User spec 2026-06-01. */
-  width: 18px;
-  min-width: 18px;
-  max-width: 18px;
+  /* Match the @media-print width (14px) so the iframe preview is WYSIWYG —
+     reports render att-wk-slot only in preview+print, never standalone, and
+     the 50-slot grid overflows the A4 paper-box at 18px. User spec 2026-06-01. */
+  width: 14px;
+  min-width: 14px;
+  max-width: 14px;
   box-sizing: border-box;
   padding: 0.05rem;
 }
