@@ -1065,6 +1065,7 @@ ALTER TABLE scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE grades ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workdays ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subject_attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE characteristics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE characteristic_evaluations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reading_thinking_evaluations ENABLE ROW LEVEL SECURITY;
@@ -1333,6 +1334,23 @@ CREATE POLICY "workdays_homeroom_write" ON workdays
     WITH CHECK (is_teacher() AND teacher_is_homeroom_of(classroom_id));
 
 CREATE POLICY "workdays_admin_all" ON workdays
+    FOR ALL USING (is_admin()) WITH CHECK (is_admin());
+
+
+-- SUBJECT_ATTENDANCE: (เวลาเรียนรายวิชา — ปพ.5 มัธยม)
+--   - staff อ่านทั้งหมด
+--   - ครูที่สอนวิชานั้นเขียนได้ (teacher_teaches_offering)
+--   - admin เต็ม
+-- NOTE: 20260517d ใส่ไว้แค่ admin_all — teacher policies เพิ่มใน 20260518b.
+CREATE POLICY "subject_attendance_staff_read" ON subject_attendance
+    FOR SELECT USING (is_staff());
+
+CREATE POLICY "subject_attendance_teacher_write" ON subject_attendance
+    FOR ALL
+    USING (is_teacher() AND teacher_teaches_offering(offering_id))
+    WITH CHECK (is_teacher() AND teacher_teaches_offering(offering_id));
+
+CREATE POLICY "subject_attendance_admin_all" ON subject_attendance
     FOR ALL USING (is_admin()) WITH CHECK (is_admin());
 
 
