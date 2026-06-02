@@ -241,11 +241,13 @@ export default async function ScoresPage({ searchParams }: Props) {
               tab={requestedTab}
             />
           </Card>
-          <Card variant="dashed" className="p-12 text-center">
-            <p className="text-sm text-zinc-500">
-              {!selectedGrade ? "เลือกระดับชั้นก่อน" : "เลือกห้องเรียนก่อน"}
-            </p>
-          </Card>
+          <FilterNavGate fallback={<TableLoadingCard />}>
+            <Card variant="dashed" className="p-12 text-center">
+              <p className="text-sm text-zinc-500">
+                {!selectedGrade ? "เลือกระดับชั้นก่อน" : "เลือกห้องเรียนก่อน"}
+              </p>
+            </Card>
+          </FilterNavGate>
         </FilterNavProvider>
       </>
     );

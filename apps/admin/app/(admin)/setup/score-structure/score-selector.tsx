@@ -84,7 +84,11 @@ export function ScoreSelector({
           }}
           className="w-32"
         >
-          {!gradeVal && <option value="">— เลือกชั้น —</option>}
+          {/* Keep the placeholder in the DOM always (disabled + hidden so it
+              can't be re-selected) so the select width stays constant — the
+              long "— เลือกชั้น —" text sets the minimum width and without it
+              the control shrinks to fit the shorter grade names. */}
+          <option value="" disabled hidden>— เลือกชั้น —</option>
           {grades.map((g) => (
             <option key={g.id} value={g.id}>
               {g.label}
