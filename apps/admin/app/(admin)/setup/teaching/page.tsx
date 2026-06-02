@@ -175,11 +175,13 @@ export default async function TeachingPage({ searchParams }: Props) {
               selectedPlanId=""
             />
           </div>
-          <Card variant="dashed" className="p-12 text-center">
-            <p className="text-sm text-zinc-500">
-              {!selectedGrade ? "เลือกชั้นก่อน" : "เลือกห้องเรียนก่อน"}
-            </p>
-          </Card>
+          <NavigationGate>
+            <Card variant="dashed" className="p-12 text-center">
+              <p className="text-sm text-zinc-500">
+                {!selectedGrade ? "เลือกชั้นก่อน" : "เลือกห้องเรียนก่อน"}
+              </p>
+            </Card>
+          </NavigationGate>
         </FilterNavProvider>
       </>
     );
