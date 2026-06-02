@@ -4189,5 +4189,46 @@ apps/admin/app/(admin)/reports/attendance-by-subject/page.tsx ← PAGE_RANGES + 
 ### commit
 `371ea43` uniform width · `94a48d8` attendance-by-subject single page
 
+---
+
+## ✅ Skeleton fix + teacher permission (สิทธิ์ครู) — เสร็จ (2026-06-02 Sonnet→Opus)
+
+### A. Skeleton ทันทีที่เลือกชั้น (subjects · teaching · score-structure)
+empty-state Card ("เลือกระดับชั้นก่อน") อยู่ใน `FilterNavProvider` แต่ **นอก** `NavigationGate`/
+`FilterNavGate` → startNav() pending=true ไม่มีผล → Card ค้างจนโหลดเสร็จ
+แก้: wrap Card ด้วย gate ทั้ง 3 หน้า · `b795cd1` (subjects+teaching) · `1ba2194` (score-structure)
+- score-structure เพิ่ม: dropdown ชั้นไม่หดหลังเลือก (placeholder `<option disabled hidden>` ค้าง DOM
+  ตั้ง min-width) · `1ba2194`
+
+### B. สิทธิ์ครูบันทึกเวลาเรียน — `ensureAdmin` block teacher
+**อาการ:** admin ใช้ได้ · teacher บันทึกเวลาเรียนแล้วหาย (รายวัน + รายวิชา)
+**root cause #1 (save guard):** ทั้ง `attendance/actions.ts` + `by-subject/actions.ts` guard ด้วย
+`ensureAdmin()` (role!=="admin" → throw "ไม่มีสิทธิ์") → teacher เรียกถูก block · actions ใช้
+`createAdminClient` (bypass RLS) อยู่แล้ว → แค่เปลี่ยน guard:
+  - รายวัน: admin OR ครูประจำชั้น (homeroom) — `ensureCanEditAttendance(classroomId)` inline
+  - รายวิชา: admin OR ครูที่สอนวิชา (teaches) — `ensureCanEditSubjectAttendance(offeringId)` inline
+  - reorder guard หลัง parse (ต้องใช้ classroom_id/offering_id) · `d6d0773`
+- เช็คเมนูอื่น (score + 3 eval) → **ทำถูกอยู่แล้ว** (`ensureCanEditOffering/Category` ·
+  `ensureCanEvaluateStudent` · `ensureCanEditAsHomeroom` จาก `@/lib/teacher-scope`) · ไม่มี bug
+
+### C. รายวิชายังหาย (read RLS) — root cause #2
+หลังแก้ save แล้ว teacher รายวิชายังหาย: **save persist (admin client bypass) แต่ READ
+(page createClient = RLS) ถูก block** · `subject_attendance` RLS = `is_admin()` เท่านั้น
+(migration 20260517d · comment "ครูเพิ่มทีหลัง" ไม่ได้ทำ) → teacher read deny → หาย
+แก้: เพิ่ม policy `subject_attendance_staff_read` (is_staff) + `subject_attendance_teacher_write`
+(teaches offering) — pattern เหมือน scores · `f8a3121`
+- ⚠️ **migrations/20260518b_subject_attendance_teacher_rls.sql** ต้อง apply ที่ Supabase Dashboard
+  (RLS อยู่ที่ DB · code deploy ไม่แก้) — **admin run แล้ว 2026-06-02**
+- sync rls_policies.sql (เดิมขาด subject_attendance ทั้ง section — RLS อยู่แค่ migration) + rebuild setup.sql
+
+### หมายเหตุ pattern (สำคัญ)
+- attendance actions ใช้ **service-role client (bypass RLS)** + per-teacher guard ใน action เอง
+- ตาราง teacher เขียนได้ ต้องมี RLS policy **read** ด้วย (ไม่งั้น save ได้แต่อ่านไม่เห็น)
+- migration ที่เพิ่ม RLS ต้อง sync เข้า `rls_policies.sql` + rebuild `setup.sql` ทุกครั้ง
+
+### commit
+`b795cd1` skeleton subjects+teaching · `1ba2194` skeleton+dropdown score-structure ·
+`d6d0773` teacher save guard · `f8a3121` subject_attendance teacher RLS (+migration 20260518b)
+
 
 
