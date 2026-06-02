@@ -1764,7 +1764,10 @@ function AttendanceWeeklyGridSection({
                 (showSummaryCols ? SUM_PX : 0);
               const slotWidthPx = slotsArea / rangeSlots;
               return (
-            <table className={attTableClass}>
+            <table
+              className={attTableClass}
+              style={{ width: `${TOTAL_TABLE_PX}px` }}
+            >
               <colgroup>
                 <col style={{ width: `${NUM_PX}px` }} />
                 {showNameCol && (

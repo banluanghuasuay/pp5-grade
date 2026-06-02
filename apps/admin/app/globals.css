@@ -1521,15 +1521,12 @@
   background: #f4f4f5;
   font-size: 7.5px;
   font-weight: 500;
-  /* min+max pin the column width so single-digit slot numbers (1–9) don't
-     render narrower than the 2-digit ones — table-layout:fixed + width:auto
-     otherwise lets content nudge the column size. User spec 2026-06-01. */
-  /* Match the @media-print width (14px) so the iframe preview is WYSIWYG —
-     reports render att-wk-slot only in preview+print, never standalone, and
-     the 50-slot grid overflows the A4 paper-box at 18px. User spec 2026-06-01. */
-  width: 14px;
-  min-width: 14px;
-  max-width: 14px;
+  /* NO fixed width here — the <colgroup> in JSX computes slotWidthPx so the
+     total table always fills TOTAL_TABLE_PX regardless of slots/week.
+     Locking min/max-width here would override the colgroup and cause the
+     table to shrink when slots/week decreases. User spec 2026-06-01 (uniform
+     table width). Only the print rule below keeps a fallback for non-JS
+     contexts (unlikely but safe). */
   box-sizing: border-box;
   padding: 0.05rem;
 }
@@ -1547,9 +1544,7 @@
    embedded preview shows. User spec 2026-05-22: "เส้นขอบขวาของตาราง
    หาย ในวิชาที่มี 5 ช่อง/สัปดาห์". */
 .att-table.att-table--dense-slots .att-wk-slot {
-  width: 10px;
-  min-width: 10px;
-  max-width: 10px;
+  /* colgroup handles width — only override styling, not sizing */
   font-size: 6px;
   padding: 0.02rem 0;
 }
@@ -1568,9 +1563,7 @@
    แบบที่น้อยกว่า30คน ความกว้างของกระดาษยังมีพื้นที่ ให้ขยายคอลัมภ์รายคาบ
    ด้วย เฉพาะวิชาที่ 2.5 หน่วยกิต". */
 .att-page-section .att-table--roomy[data-slots-per-week="5"] .att-wk-slot {
-  width: 12px;
-  min-width: 12px;
-  max-width: 12px;
+  /* colgroup handles width — only font override */
   font-size: 7px;
 }
 /* Student names get a bigger font than other cells for readability —
@@ -2226,13 +2219,10 @@
   .att-page-section .att-table tbody .att-name {
     font-size: 12px;
   }
-  /* Smaller running-hour number in the slot header (compact print) */
+  /* Smaller running-hour number in the slot header (compact print).
+     Width is controlled by <colgroup> in JSX — no fixed override here. */
   .att-table .att-wk-slot {
     font-size: 6.5px;
-    width: 14px;
-    min-width: 14px;
-    max-width: 14px;
-    box-sizing: border-box;
   }
   /* Tighter fixed-column widths on print to leave more room for day cells */
   .att-table .att-col-num {
