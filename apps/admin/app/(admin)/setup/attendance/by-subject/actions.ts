@@ -20,11 +20,36 @@ export type SubjectAttendanceStatus = "present" | "absent" | "leave";
 
 const REVALIDATE_PATH = "/setup/attendance/by-subject";
 
-async function ensureAdmin(): Promise<void> {
+/**
+ * Authorize a subject-attendance write: admin always, OR the teacher who
+ * teaches this offering. Actions use the service-role client (bypasses RLS)
+ * so the per-teacher check lives here. User report 2026-06-02: teachers got
+ * "ไม่มีสิทธิ์" / "บันทึกไม่สำเร็จ" because the old guard was admin-only.
+ */
+async function ensureCanEditSubjectAttendance(
+  offeringId: string,
+): Promise<void> {
   const auth = await getCurrentUser();
-  if (!auth || auth.profile.role !== "admin") {
-    throw new Error("ไม่มีสิทธิ์");
+  if (!auth) throw new Error("ไม่มีสิทธิ์");
+  if (auth.profile.role === "admin") return;
+  if (auth.profile.role === "teacher") {
+    const admin = createAdminClient();
+    const { data: teacher } = await admin
+      .from("teachers")
+      .select("id")
+      .eq("user_id", auth.profile.id)
+      .maybeSingle();
+    if (teacher) {
+      const { data: off } = await admin
+        .from("subject_offerings")
+        .select("id")
+        .eq("id", offeringId)
+        .eq("teacher_id", teacher.id)
+        .maybeSingle();
+      if (off) return;
+    }
   }
+  throw new Error("ไม่มีสิทธิ์ — เฉพาะครูที่สอนวิชานี้หรือผู้ดูแลระบบ");
 }
 
 /**
@@ -40,8 +65,6 @@ async function ensureAdmin(): Promise<void> {
  * the grid client can follow the same per-cell save pattern.
  */
 export async function saveSubjectAttendance(formData: FormData): Promise<void> {
-  await ensureAdmin();
-
   const offeringId = String(formData.get("offering_id") ?? "").trim();
   const studentId = String(formData.get("student_id") ?? "").trim();
   const weekStr = String(formData.get("week") ?? "").trim();
@@ -51,6 +74,8 @@ export async function saveSubjectAttendance(formData: FormData): Promise<void> {
   if (!offeringId || !studentId || !weekStr || !slotStr) {
     throw new Error("missing offering/student/week/slot");
   }
+
+  await ensureCanEditSubjectAttendance(offeringId);
 
   const week = Number.parseInt(weekStr, 10);
   const slot = Number.parseInt(slotStr, 10);
@@ -116,8 +141,6 @@ export async function saveSubjectAttendance(formData: FormData): Promise<void> {
 export async function setSubjectAttendanceForSlot(
   formData: FormData,
 ): Promise<void> {
-  await ensureAdmin();
-
   const offeringId = String(formData.get("offering_id") ?? "").trim();
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
   const semesterStr = String(formData.get("semester") ?? "").trim();
@@ -126,6 +149,8 @@ export async function setSubjectAttendanceForSlot(
   const setPresent = formData.get("set_present") === "true";
 
   if (!offeringId || !classroomId) throw new Error("missing offering/classroom");
+
+  await ensureCanEditSubjectAttendance(offeringId);
 
   const week = Number.parseInt(weekStr, 10);
   const slot = Number.parseInt(slotStr, 10);

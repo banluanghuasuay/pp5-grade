@@ -8,11 +8,34 @@ import { semesterFromIsoDate } from "./calendar";
 
 export type AttendanceStatus = "present" | "absent" | "leave" | "sick";
 
-async function ensureAdmin(): Promise<void> {
+/**
+ * Authorize an attendance write: admin always, OR the homeroom teacher of
+ * this classroom (รายวันเช็คโดยครูประจำชั้น). User report 2026-06-02: teachers
+ * got "ไม่มีสิทธิ์" because the old guard was admin-only — actions use the
+ * service-role client (bypasses RLS) so the per-teacher check must be here.
+ */
+async function ensureCanEditAttendance(classroomId: string): Promise<void> {
   const auth = await getCurrentUser();
-  if (!auth || auth.profile.role !== "admin") {
-    throw new Error("ไม่มีสิทธิ์");
+  if (!auth) throw new Error("ไม่มีสิทธิ์");
+  if (auth.profile.role === "admin") return;
+  if (auth.profile.role === "teacher") {
+    const admin = createAdminClient();
+    const { data: teacher } = await admin
+      .from("teachers")
+      .select("id")
+      .eq("user_id", auth.profile.id)
+      .maybeSingle();
+    if (teacher) {
+      const { data: hr } = await admin
+        .from("homeroom_assignments")
+        .select("id")
+        .eq("classroom_id", classroomId)
+        .eq("teacher_id", teacher.id)
+        .maybeSingle();
+      if (hr) return;
+    }
   }
+  throw new Error("ไม่มีสิทธิ์ — เฉพาะครูประจำชั้นหรือผู้ดูแลระบบ");
 }
 
 /**
@@ -57,13 +80,12 @@ async function ensureDateEditableForClassroom(
  *                         shouldn't have attendance records — per user request).
  */
 export async function toggleWorkday(formData: FormData): Promise<void> {
-  await ensureAdmin();
-
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
   const date = String(formData.get("date") ?? "").trim();
   const isWorkday = formData.get("is_workday") === "true";
   if (!classroomId || !date) throw new Error("missing classroom_id/date");
 
+  await ensureCanEditAttendance(classroomId);
   await ensureDateEditableForClassroom(classroomId, date);
 
   const admin = createAdminClient();
@@ -106,13 +128,12 @@ export async function toggleWorkday(formData: FormData): Promise<void> {
  * Click ซ้ำ → clear ทั้งห้อง.
  */
 export async function setAllForDay(formData: FormData): Promise<void> {
-  await ensureAdmin();
-
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
   const date = String(formData.get("date") ?? "").trim();
   const setPresent = formData.get("set_present") === "true";
   if (!classroomId || !date) throw new Error("missing classroom_id/date");
 
+  await ensureCanEditAttendance(classroomId);
   await ensureDateEditableForClassroom(classroomId, date);
 
   const admin = createAdminClient();
@@ -178,8 +199,6 @@ export async function setAllForDay(formData: FormData): Promise<void> {
  * Schema has UNIQUE(student_id, date) so onConflict works cleanly.
  */
 export async function saveAttendance(formData: FormData): Promise<void> {
-  await ensureAdmin();
-
   const studentId = String(formData.get("student_id") ?? "").trim();
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
   const date = String(formData.get("date") ?? "").trim();
@@ -188,6 +207,7 @@ export async function saveAttendance(formData: FormData): Promise<void> {
     throw new Error("missing student/classroom/date");
   }
 
+  await ensureCanEditAttendance(classroomId);
   await ensureDateEditableForClassroom(classroomId, date);
 
   const admin = createAdminClient();
