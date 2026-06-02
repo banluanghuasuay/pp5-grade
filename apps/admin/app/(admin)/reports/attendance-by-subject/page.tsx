@@ -317,11 +317,24 @@ export default async function AttendanceBySubjectReport({ searchParams }: Props)
   };
 
   // Split into 2 sub-tables (10 weeks each) so the grid isn't squeezed.
-  // Each sub-table renders on its own A4 page via .att-page-break.
-  const PAGE_RANGES: Array<[number, number]> = [
-    [1, 10],
-    [11, 20],
-  ];
+  // Exception: ≤1 slot/week (e.g. 0.5 credit_hours) fits all 20 weeks on one
+  // A4 page — keep it single-page so the name+grid+summary are all together.
+  // User spec 2026-06-01.
+  const PAGE_RANGES: Array<[number, number]> =
+    slotsPerWeek <= 1
+      ? [[1, 20]]
+      : [
+          [1, 10],
+          [11, 20],
+        ];
+
+  // Fixed table width (px) — the same value used in /reports/pp5 weekly grid.
+  // <colgroup> distributes this among num + name + slots + summary so the
+  // table stays full-width regardless of how many slot columns there are.
+  // Mirrors the TOTAL_TABLE_PX constant in AttendanceWeeklyGridSection.
+  const TOTAL_TABLE_PX = 673;
+  const NUM_PX = 18;
+  const NAME_PX = 115;
 
   // Pad student rows to this many — keeps the printed grid a fixed size
   // even when fewer students are enrolled. Expand to fit if class > 30
@@ -403,6 +416,15 @@ export default async function AttendanceBySubjectReport({ searchParams }: Props)
           const showNameCol = pageIdx === 0;
           const showSummaryCols = isLastPage;
 
+          // Distribute TOTAL_TABLE_PX evenly: num + (name?) + slots + (summary?)
+          const SUM_PX = 24 * 3 + 44; // มา · ขาด · ลา · ร้อยละ
+          const slotsArea =
+            TOTAL_TABLE_PX -
+            NUM_PX -
+            (showNameCol ? NAME_PX : 0) -
+            (showSummaryCols ? SUM_PX : 0);
+          const slotWidthPx = slotsArea / rangeSlots;
+
           return (
             <section
               key={`pg-${firstWeek}`}
@@ -457,7 +479,25 @@ export default async function AttendanceBySubjectReport({ searchParams }: Props)
               <table
                 className={attTableClass}
                 data-slots-per-week={slotsPerWeek}
+                style={{ width: `${TOTAL_TABLE_PX}px` }}
               >
+                <colgroup>
+                  <col style={{ width: `${NUM_PX}px` }} />
+                  {showNameCol && (
+                    <col style={{ width: `${NAME_PX}px` }} />
+                  )}
+                  {Array.from({ length: rangeSlots }, (_, i) => (
+                    <col key={`sl-${i}`} style={{ width: `${slotWidthPx}px` }} />
+                  ))}
+                  {showSummaryCols && (
+                    <>
+                      <col style={{ width: "24px" }} />
+                      <col style={{ width: "24px" }} />
+                      <col style={{ width: "24px" }} />
+                      <col style={{ width: "44px" }} />
+                    </>
+                  )}
+                </colgroup>
                 <thead>
                   <tr>
                     <th rowSpan={3} className="att-col-num">
