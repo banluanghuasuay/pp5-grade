@@ -4165,5 +4165,29 @@ globals.css (.att-page header flex · .att-wk-slot min/max · base=print col wid
 - โรงเรียนแรก (prod เดิม) — ถ้ายังไม่ได้ลง `20260518a` (eval CHECK 0) ใช้ `migrations/20260518a` apply เพิ่ม
 - **Sonnet 4.6 ทำงานต่อได้** — งานเหลือ (docs/env) มีโครงสร้างชัด · อ่าน SETUP_PROGRESS + AGENTS.md ก่อนเริ่ม
 
+---
+
+## ✅ ปพ.5 รายวิชา + attendance-by-subject polish — เสร็จ (2026-06-02 Sonnet)
+
+### A. ความกว้างตารางสม่ำเสมอ (uniform table width)
+CSS lock `min/max-width` บน `.att-wk-slot` override colgroup → ตารางหดเมื่อ slot น้อย
+แก้: ลบ min/max-width ออกทุก tier (base/dense/roomy/print) · เพิ่ม `style={{ width: 673px }}`
+บน `<table>` ใน pp5/page.tsx → colgroup แจกความกว้างเต็ม 673px ทุกวิชา · `371ea43`
+
+### B. attendance-by-subject: single page + uniform width
+PAGE_RANGES ตายตัว [[1,10],[11,20]] ไม่มี 1-slot logic:
+- slotsPerWeek<=1 → [[1,20]] (หน้าเดียว ชื่อ+20สัปดาห์+สรุป)
+- เพิ่ม colgroup + style width 673px (mirrors pp5 bundle) · `94a48d8`
+
+### Files แก้
+```
+apps/admin/app/globals.css         ← ลบ min/max-width att-wk-slot
+apps/admin/app/(admin)/reports/pp5/page.tsx ← table style width
+apps/admin/app/(admin)/reports/attendance-by-subject/page.tsx ← PAGE_RANGES + colgroup
+```
+
+### commit
+`371ea43` uniform width · `94a48d8` attendance-by-subject single page
+
 
 
