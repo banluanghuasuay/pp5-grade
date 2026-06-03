@@ -236,11 +236,13 @@ export default async function BySubjectPage({ searchParams }: Props) {
               }
             />
           </Card>
-          <Card variant="dashed" className="p-12 text-center">
-            <p className="text-sm text-zinc-500">
-              {!selectedGrade ? "เลือกระดับชั้นก่อน" : "เลือกห้องเรียนก่อน"}
-            </p>
-          </Card>
+          <FilterNavGate fallback={<GridLoadingFallback />}>
+            <Card variant="dashed" className="p-12 text-center">
+              <p className="text-sm text-zinc-500">
+                {!selectedGrade ? "เลือกระดับชั้นก่อน" : "เลือกห้องเรียนก่อน"}
+              </p>
+            </Card>
+          </FilterNavGate>
         </FilterNavProvider>
       </>
     );

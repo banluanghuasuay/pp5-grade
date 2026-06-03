@@ -1,6 +1,7 @@
 "use client";
 
 import { Select } from "@pp5/ui";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useFilterNav } from "../../_components/filter-nav-context";
 import { useOptimisticValue } from "../../_components/use-optimistic-value";
@@ -49,7 +50,7 @@ export function BySubjectSelector({
 }: Props) {
   const router = useRouter();
   // Fire the grid skeleton at 0ms on selection — see filter-nav-context.
-  const { startNav } = useFilterNav();
+  const { startNav, pending } = useFilterNav();
   // Optimistic mirrors so each dropdown snaps to the picked value instantly,
   // instead of waiting for the RSC navigation to commit.
   const [gradeVal, setGradeOpt] = useOptimisticValue(selectedGradeId);
@@ -125,32 +126,44 @@ export function BySubjectSelector({
 
       <div className="flex items-center gap-2">
         <label className="text-sm font-medium text-zinc-700">เลือกวิชา:</label>
-        <Select
-          value={subjectVal}
-          onChange={(e) => {
-            setSubjectOpt(e.target.value);
-            navigate({ subject: e.target.value });
-          }}
-          className="min-w-[20rem]"
-          disabled={subjects.length === 0}
-        >
-          {subjects.length === 0 ? (
-            <option value="">(ไม่มีวิชาในห้องนี้)</option>
-          ) : (
-            <>
-              {!subjectVal && (
-                <option value="">— เลือกวิชา —</option>
-              )}
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                  {s.credit_hours != null && ` · ${s.credit_hours} นก.`}
-                  {!s.hasTeacher && " · (ยังไม่จัดครูเข้าสอน)"}
-                </option>
-              ))}
-            </>
-          )}
-        </Select>
+        {/* Show spinner inline (next to label) while grade/room change is
+            pending — the subjects list is still empty at that point, so
+            "ไม่มีวิชา" would flash incorrectly. The Select below is replaced
+            by a small loading indicator until the RSC commits and real subject
+            options arrive. */}
+        {pending && subjects.length === 0 ? (
+          <div className="flex items-center gap-1.5 text-sm text-zinc-500">
+            <Loader2 className="size-4 animate-spin" />
+            <span>กำลังโหลด...</span>
+          </div>
+        ) : (
+          <Select
+            value={subjectVal}
+            onChange={(e) => {
+              setSubjectOpt(e.target.value);
+              navigate({ subject: e.target.value });
+            }}
+            className="min-w-[20rem]"
+            disabled={subjects.length === 0}
+          >
+            {subjects.length === 0 ? (
+              <option value="">(ไม่มีวิชาในห้องนี้)</option>
+            ) : (
+              <>
+                {!subjectVal && (
+                  <option value="">— เลือกวิชา —</option>
+                )}
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                    {s.credit_hours != null && ` · ${s.credit_hours} นก.`}
+                    {!s.hasTeacher && " · (ยังไม่จัดครูเข้าสอน)"}
+                  </option>
+                ))}
+              </>
+            )}
+          </Select>
+        )}
       </div>
     </div>
   );
