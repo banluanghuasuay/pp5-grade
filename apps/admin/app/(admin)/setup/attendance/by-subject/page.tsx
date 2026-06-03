@@ -527,6 +527,11 @@ export default async function BySubjectPage({ searchParams }: Props) {
         </p>
       )}
 
+      {/* Wrap the entire body in FilterNavGate so selecting a subject
+          (or changing grade/room) shows GridLoadingFallback instantly —
+          previously only the inner grid branch had the gate, leaving the
+          "เลือกวิชาก่อน" cards unresponsive to startNav(). */}
+      <FilterNavGate fallback={<GridLoadingFallback />}>
       {/* No subject in this scope */}
       {sortedSubjects.length > 0 && !selectedSubject ? (
         <Card variant="dashed" className="p-12 text-center">
@@ -582,9 +587,9 @@ export default async function BySubjectPage({ searchParams }: Props) {
             />
           </div>
 
-          {/* Gate the grid (not the header/tabs) — grid swaps to the spinner
-              the instant a tab/selector changes. */}
-          <FilterNavGate fallback={<GridLoadingFallback />}>
+          {/* Suspense shows GridLoadingFallback while grid streams in.
+              The outer FilterNavGate (above) handles the instant-skeleton
+              for grade/room/subject changes. */}
           <Suspense
             key={`${selectedOfferingId}-${tab}`}
             fallback={<GridLoadingFallback />}
@@ -600,9 +605,9 @@ export default async function BySubjectPage({ searchParams }: Props) {
               totalSlots={totalSlots}
             />
           </Suspense>
-          </FilterNavGate>
         </Card>
       )}
+      </FilterNavGate>
       </FilterNavProvider>
     </>
   );
