@@ -13,7 +13,11 @@ import { PrintButton } from "../pp5/print-button";
 import { withSchoolPrefix } from "@/lib/school-name";
 import { AutoPrint } from "./auto-print";
 import type { Metadata } from "next";
-import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
+import {
+  currentTermSuffix,
+  reportClassroomLabel,
+  reportRoomSuffix,
+} from "@/lib/current-term";
 
 export async function generateMetadata({
   searchParams,
@@ -114,7 +118,7 @@ export default async function GradeSummaryReportPage({ searchParams }: Props) {
   const isPrimary = classroom.grade_level.system === "primary";
   const gradingPeriod: "annual" | "semester" = isPrimary ? "annual" : "semester";
   const yearBe = classroom.academic_year.year_be;
-  const classLabel = `ชั้น${classroom.grade_level.name_th}/${classroom.room_number}`;
+  const classLabel = `ชั้น${classroom.grade_level.name_th}${await reportRoomSuffix(classroomId)}`;
   const subjectLabel = `[${subject.code}] ${subject.name_th}`;
 
   // Enrolled students — primary uses semester=0 (annual); for secondary

@@ -7,7 +7,11 @@ import {
 } from "../../setup/score-structure/grading-utils";
 import { type HeaderInfo, Pp5Frame } from "../_shared/score-report";
 import type { Metadata } from "next";
-import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
+import {
+  currentTermSuffix,
+  reportClassroomLabel,
+  reportRoomSuffix,
+} from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
 import {
   type ClassroomOption,
@@ -186,7 +190,7 @@ export default async function Pp6Page({ searchParams }: Props) {
   const currentSemester: 1 | 2 = (classroom.academic_year.current_semester ??
     1) as 1 | 2;
   const gradeName = classroom.grade_level.name_th;
-  const classLabel = `ชั้น${classroom.grade_level.name_th}/${classroom.room_number}`;
+  const classLabel = `ชั้น${classroom.grade_level.name_th}${await reportRoomSuffix(classroomId)}`;
 
   // Effective semester for SECONDARY single-semester math (annual is
   // primary-only — secondary always renders its current semester).

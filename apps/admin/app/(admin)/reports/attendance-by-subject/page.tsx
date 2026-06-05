@@ -3,7 +3,11 @@ import Link from "next/link";
 import { resolveAnchorIso } from "../../setup/attendance/by-subject/term-weeks";
 import { abbreviateTitle } from "../../setup/score-structure/grading-utils";
 import type { Metadata } from "next";
-import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
+import {
+  currentTermSuffix,
+  reportClassroomLabel,
+  reportRoomSuffix,
+} from "@/lib/current-term";
 import { PrintButton } from "../pp5/print-button";
 
 export async function generateMetadata({
@@ -365,7 +369,7 @@ export default async function AttendanceBySubjectReport({ searchParams }: Props)
         : ""
   }${isDenseSlots ? " att-table--dense-slots" : ""}`;
 
-  const classLabel = `ชั้น${classroom.grade_level.name_th}/${classroom.room_number}`;
+  const classLabel = `ชั้น${classroom.grade_level.name_th}${await reportRoomSuffix(classroomId)}`;
 
   return (
     <>

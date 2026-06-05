@@ -11,7 +11,11 @@ import {
 import { type HeaderInfo, Pp5Frame, NumericTable, PrimaryAnnualSummary, PassFailTable, Pp5SimpleHeader, Pp5Footer } from "../_shared/score-report";
 import { Pp5SelectorForm } from "./pp5-selector-form";
 import type { Metadata } from "next";
-import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
+import {
+  currentTermSuffix,
+  reportClassroomLabel,
+  reportRoomSuffix,
+} from "@/lib/current-term";
 import { withSchoolPrefix } from "@/lib/school-name";
 import { getTeacherScope } from "@/lib/teacher-scope";
 
@@ -621,7 +625,7 @@ export default async function Pp5Page({ searchParams }: Props) {
     academicHeadName: school?.academic_head_name ?? null,
     assessmentOfficerName: school?.assessment_officer_name ?? null,
     // Full label per user spec — "ชั้นประถมศึกษาปีที่ 1/1" / "ชั้นมัธยมศึกษาปีที่ 1/1"
-    classLabel: `ชั้น${classroom.grade_level.name_th}/${classroom.room_number}`,
+    classLabel: `ชั้น${classroom.grade_level.name_th}${await reportRoomSuffix(classroomId)}`,
     gradeShort,
     isPrimaryLevel,
     isSecondaryLevel,
@@ -2595,6 +2599,16 @@ async function Pp5Selector() {
     subjects: SubjectInfo[];
   };
 
+  // Multi-room detection per grade → only suffix "/N" when the grade has 2+
+  // rooms, so single-room grades show "ป.1" not "ป.1/1" (matches report
+  // headers + pp6/pp5-class selectors). User spec 2026-06-05.
+  const roomCountByGrade = new Map<string, number>();
+  for (const c of classroomRows ?? []) {
+    if (!c.grade_level) continue;
+    const k = c.grade_level.id;
+    roomCountByGrade.set(k, (roomCountByGrade.get(k) ?? 0) + 1);
+  }
+
   const classroomOptions: ClassroomOption[] = (classroomRows ?? [])
     .filter((c) => c.grade_level)
     .filter((c) => {
@@ -2614,7 +2628,10 @@ async function Pp5Selector() {
         : planSubjects;
       return {
         id: c.id,
-        label: `${c.grade_level!.name_short}/${c.room_number}`,
+        label:
+          (roomCountByGrade.get(c.grade_level!.id) ?? 0) > 1
+            ? `${c.grade_level!.name_short}/${c.room_number}`
+            : c.grade_level!.name_short,
         grade_id: c.grade_level!.id,
         grade_label: c.grade_level!.name_short,
         grade_sort: c.grade_level!.sort_order,

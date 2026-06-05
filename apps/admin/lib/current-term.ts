@@ -77,6 +77,33 @@ export async function reportClassroomLabel(
 }
 
 /**
+ * Room suffix for report HEADERS — "/2" when the grade+year has 2+ rooms,
+ * else "" so a single-room grade shows just "ชั้นประถมศึกษาปีที่ 1" with no
+ * trailing "/1". Mirrors reportClassroomLabel (PDF filenames) but returns the
+ * raw "/N" fragment to splice into the existing `ชั้น${name_th}` headers.
+ * User spec 2026-06-05.
+ */
+export async function reportRoomSuffix(
+  classroomId: string | undefined,
+): Promise<string> {
+  if (!classroomId) return "";
+  const supabase = await createClient();
+  const { data: c } = await supabase
+    .from("classrooms")
+    .select("room_number, grade_level_id, academic_year_id")
+    .eq("id", classroomId)
+    .maybeSingle();
+  if (!c) return "";
+  // Count rooms in this grade+year → only show "/N" when there are 2+.
+  const { count } = await supabase
+    .from("classrooms")
+    .select("*", { count: "exact", head: true })
+    .eq("grade_level_id", c.grade_level_id)
+    .eq("academic_year_id", c.academic_year_id);
+  return (count ?? 0) > 1 ? `/${c.room_number}` : "";
+}
+
+/**
  * Compare a target semester against the current term to determine
  * lock state. Useful in both UI (decide disabled/readonly) and
  * server actions (guard writes).

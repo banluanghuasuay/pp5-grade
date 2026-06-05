@@ -12,7 +12,11 @@ import { abbreviateTitle } from "../../setup/score-structure/grading-utils";
 import { AttendanceSummarySection } from "../../setup/attendance/summary-section";
 import { PrintButton } from "../pp5/print-button";
 import type { Metadata } from "next";
-import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
+import {
+  currentTermSuffix,
+  reportClassroomLabel,
+  reportRoomSuffix,
+} from "@/lib/current-term";
 
 export async function generateMetadata({
   searchParams,
@@ -234,7 +238,7 @@ export default async function AttendanceReportPage({ searchParams }: Props) {
     schoolName: school?.name_th ?? "—",
     affiliation: school?.affiliation ?? "—",
     logoUrl: school?.logo_url ?? null,
-    classLabel: `ชั้น${classroom.grade_level.name_th}/${classroom.room_number}`,
+    classLabel: `ชั้น${classroom.grade_level.name_th}${await reportRoomSuffix(classroomId)}`,
     yearBe,
     semester: term,
     monthLabel: THAI_MONTH_FULL[month - 1],
@@ -566,7 +570,7 @@ async function SummaryReport({
     schoolName: school?.name_th ?? "—",
     affiliation: school?.affiliation ?? "—",
     logoUrl: school?.logo_url ?? null,
-    classLabel: `ชั้น${classroom.grade_level.name_th}/${classroom.room_number}`,
+    classLabel: `ชั้น${classroom.grade_level.name_th}${await reportRoomSuffix(classroomId)}`,
     yearBe,
     // Re-use field even though "semester" doesn't apply for full-year summary:
     semester: term ?? 1,

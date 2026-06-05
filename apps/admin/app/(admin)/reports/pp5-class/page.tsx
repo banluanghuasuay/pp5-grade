@@ -13,7 +13,11 @@ import { NumericTable, PrimaryAnnualSummary, PassFailTable } from "../_shared/sc
 import { EvalSection } from "../pp5/page";
 import type { Metadata } from "next";
 import { withSchoolPrefix } from "@/lib/school-name";
-import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
+import {
+  currentTermSuffix,
+  reportClassroomLabel,
+  reportRoomSuffix,
+} from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
 import {
   Pp5ClassSelectorForm,
@@ -189,7 +193,7 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
   const semester: 1 | 2 = (classroom.academic_year.current_semester ?? 1) as
     | 1
     | 2;
-  const classLabel = `ชั้น${classroom.grade_level.name_th}/${classroom.room_number}`;
+  const classLabel = `ชั้น${classroom.grade_level.name_th}${await reportRoomSuffix(classroomId)}`;
 
   // 3. Enrollments — primary uses semester=0 (annual), secondary uses
   //    current term (1 or 2)

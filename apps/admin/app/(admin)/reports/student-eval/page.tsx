@@ -3,7 +3,11 @@ import Link from "next/link";
 import { abbreviateTitle } from "../../setup/score-structure/grading-utils";
 import { PrintButton } from "../pp5/print-button";
 import type { Metadata } from "next";
-import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
+import {
+  currentTermSuffix,
+  reportClassroomLabel,
+  reportRoomSuffix,
+} from "@/lib/current-term";
 import { withSchoolPrefix } from "@/lib/school-name";
 
 export async function generateMetadata({
@@ -150,7 +154,7 @@ export default async function StudentEvalReportPage({ searchParams }: Props) {
   const isPrimary = classroom.grade_level.system === "primary";
   const yearId = classroom.academic_year.id;
   const yearBe = classroom.academic_year.year_be;
-  const classLabel = `ชั้น${classroom.grade_level.name_th}/${classroom.room_number}`;
+  const classLabel = `ชั้น${classroom.grade_level.name_th}${await reportRoomSuffix(classroomId)}`;
 
   // Reconcile the read scope:
   //   - primary  → always 0 (annual scope · ignore URL hint if it says 1/2)

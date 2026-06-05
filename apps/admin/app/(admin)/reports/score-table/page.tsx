@@ -14,7 +14,11 @@ import {
   Pp5SimpleHeader,
 } from "../_shared/score-report";
 import type { Metadata } from "next";
-import { currentTermSuffix, reportClassroomLabel } from "@/lib/current-term";
+import {
+  currentTermSuffix,
+  reportClassroomLabel,
+  reportRoomSuffix,
+} from "@/lib/current-term";
 import { getTeacherScope } from "@/lib/teacher-scope";
 
 // ===================================================================
@@ -264,7 +268,7 @@ export default async function ScoreTablePage({ searchParams }: Props) {
     deputyDirectorName: school?.deputy_director_name ?? null,
     academicHeadName: school?.academic_head_name ?? null,
     assessmentOfficerName: school?.assessment_officer_name ?? null,
-    classLabel: `ชั้น${classroom.grade_level.name_th}/${classroom.room_number}`,
+    classLabel: `ชั้น${classroom.grade_level.name_th}${await reportRoomSuffix(classroomId)}`,
     gradeShort,
     isPrimaryLevel,
     isSecondaryLevel,
