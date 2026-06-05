@@ -3,7 +3,9 @@ import { getCurrentUser } from "@pp5/database/queries";
 import { getCurrentTerm } from "@/lib/current-term";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { logoutAction } from "../_actions/auth";
+import { UpdateBanner } from "./_components/update-banner";
 import { MobileHeader } from "./_components/mobile-header";
 import { MobileNavProvider } from "./_components/mobile-nav-context";
 import { NavigationOverlay } from "./_components/navigation-overlay";
@@ -74,6 +76,13 @@ export default async function AppLayout({
           <MobileHeader userLabel={userLabel} term={term} />
 
           <main className="flex-1 overflow-x-hidden">
+            {/* Update-available banner — admin-only (they sync the fork).
+                Suspense so the GitHub version check never blocks first paint. */}
+            {isAdmin && (
+              <Suspense fallback={null}>
+                <UpdateBanner />
+              </Suspense>
+            )}
             {/* Phase 2.6 — top context strip on every page (breadcrumb + term) */}
             <PageContextBar term={term} />
             <div className="mx-auto max-w-6xl p-6 sm:p-8">

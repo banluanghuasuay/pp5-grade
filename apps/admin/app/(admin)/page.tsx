@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { VersionStatus } from "./_components/version-status";
 
 type StatCardProps = {
   label: string;
@@ -590,6 +592,12 @@ export default async function Dashboard() {
           </Card>
         </section>
       )}
+
+      {/* Version indicator — always shows current version + update status.
+          Suspense so the GitHub version check never blocks the dashboard. */}
+      <Suspense fallback={null}>
+        <VersionStatus />
+      </Suspense>
     </>
   );
 }
