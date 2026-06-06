@@ -4315,5 +4315,19 @@ Vercel region → **sin1** (Singapore) ให้ตรงกับ Supabase ap-s
    · ถ้ามี finalized แต่ไม่แสดง = บั๊ก embed/RLS ค่อยขุด
 3. ทดสอบ 3a + ฐานนิยม กับข้อมูลจริง (login นักเรียนที่มีเกรด finalize + ประเมิน)
 
+### เพิ่มเติม 2026-06-06 (ต่อ)
+- **pp5-class เรียงวิชา** · `e01f57f`: พื้นฐาน→เพิ่มเติม→กิจกรรม · ในแต่ละประเภทตามกลุ่มสาระ
+  (learning_areas.sort_order) แล้วตามรหัส · ดึง learning_area เพิ่มใน study_plan_subjects query
+- **ปพ.6 นักเรียนโชว์ก่อนมีเกรด** · `35b01b5`: เปลี่ยนจากดึงวิชา "จากเกรด" → "จากการลงทะเบียน →
+  ห้อง → แผนการเรียน" (study_plan_subjects/study_plans = USING TRUE · enrollments_student_read_own)
+  · วิชาที่ยังไม่มีเกรด = "—" · GPA โชว์เมื่อ gradedCount>0
+  - report-card.ts: `fetchTerms` (จาก enrollments) · `fetchTermSubjects` (จากแผน · เรียงเหมือน pp5-class)
+    · `buildTermReport` overlay เกรดลงบนรายวิชา · เงื่อนไข: ห้องต้องผูก study_plan ที่มีวิชาในปี/เทอมนั้น
+- **keep-alive Supabase (Free tier pause หลัง ~7 วัน idle)** · `c92459e`:
+  `.github/workflows/keepalive-supabase.yml` ping `grade_levels` (USING TRUE) ทุกวันผ่าน cron +
+  workflow_dispatch · ต้องตั้ง secret `SUPABASE_URL` + `SUPABASE_ANON_KEY` · user ตั้ง+ทดสอบสำเร็จ
+  (HTTP 200) · คู่มือใน DEPLOY.md · ⚠️ fork: scheduled ปิดถ้า fork idle 60 วัน (ใช้จริงทุกวันก็ไม่ pause)
+- repo มี GitHub Actions แล้ว (เดิมไม่มี `.github/`) · ยังไม่มี CI type-check/lint (Vercel build จับ error ตอน deploy)
+
 
 
