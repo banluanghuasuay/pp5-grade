@@ -7,6 +7,8 @@ import {
   abbreviateTitle,
   averageTwoSemesters,
   cutGrade,
+  evalLevelLabel,
+  overallEvalLevel,
 } from "../../setup/score-structure/grading-utils";
 import { type HeaderInfo, Pp5Frame, NumericTable, PrimaryAnnualSummary, PassFailTable, Pp5SimpleHeader, Pp5Footer } from "../_shared/score-report";
 import { Pp5SelectorForm } from "./pp5-selector-form";
@@ -418,30 +420,28 @@ export default async function Pp5Page({ searchParams }: Props) {
   // recorded eval counts as null (excluded from totals).
   const charDistribution = { d3: 0, d2: 0, d1: 0, d0: 0 };
   const rtDistribution = { d3: 0, d2: 0, d1: 0, d0: 0 };
+  const bucket = (
+    dist: { d3: number; d2: number; d1: number; d0: number },
+    level: number | null,
+  ) => {
+    if (level === 3) dist.d3++;
+    else if (level === 2) dist.d2++;
+    else if (level === 1) dist.d1++;
+    else if (level === 0) dist.d0++;
+  };
   for (const s of students) {
-    // คุณลักษณะ: avg over all 8 characteristic scores
+    // คุณลักษณะ — ฐานนิยมของทุกข้อ (มี 0 แม้ข้อเดียว = ไม่ผ่าน)
     const inner = charEvalMap.get(s.id);
     if (inner && inner.size > 0) {
-      const sum = Array.from(inner.values()).reduce((a, b) => a + b, 0);
-      const avg = sum / inner.size;
-      if (avg >= 2.5) charDistribution.d3++;
-      else if (avg >= 1.5) charDistribution.d2++;
-      else if (avg >= 0.5) charDistribution.d1++;
-      else charDistribution.d0++;
+      bucket(charDistribution, overallEvalLevel(Array.from(inner.values())));
     }
-    // อ่านคิดเขียน: avg over 3 sub-scores (reading + thinking + writing)
+    // อ่านคิดเขียน — ฐานนิยมของ 3 ด้าน
     const rt = readingThinkingByStudent.get(s.id);
     if (rt) {
-      const nums = [rt.reading, rt.thinking, rt.writing].filter(
-        (n): n is number => typeof n === "number",
+      bucket(
+        rtDistribution,
+        overallEvalLevel([rt.reading, rt.thinking, rt.writing]),
       );
-      if (nums.length > 0) {
-        const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
-        if (avg >= 2.5) rtDistribution.d3++;
-        else if (avg >= 1.5) rtDistribution.d2++;
-        else if (avg >= 0.5) rtDistribution.d1++;
-        else rtDistribution.d0++;
-      }
     }
   }
 
@@ -2424,7 +2424,6 @@ function EvalReportPage({
             const scores = s
               ? (scoresByStudent.get(s.id) ?? columns.map(() => null))
               : [];
-            const avg = s ? avgOf(scores) : null;
             return (
               <tr key={`r-${rowNum}`}>
                 <td>{rowNum}</td>
@@ -2435,7 +2434,11 @@ function EvalReportPage({
                   </td>
                 ))}
                 <td>
-                  {s ? <strong>{summaryFromAvg(avg)}</strong> : ""}
+                  {s ? (
+                    <strong>{evalLevelLabel(overallEvalLevel(scores))}</strong>
+                  ) : (
+                    ""
+                  )}
                 </td>
               </tr>
             );

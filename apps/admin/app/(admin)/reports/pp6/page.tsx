@@ -4,6 +4,8 @@ import {
   abbreviateTitle,
   averageTwoSemesters,
   cutGrade,
+  evalLevelLabel,
+  overallEvalLevel,
 } from "../../setup/score-structure/grading-utils";
 import { type HeaderInfo, Pp5Frame } from "../_shared/score-report";
 import type { Metadata } from "next";
@@ -504,7 +506,9 @@ export default async function Pp6Page({ searchParams }: Props) {
   //    the current term. Mirrors /reports/student-eval's avg→summary map.
   const evalSemester: 0 | 1 | 2 = isPrimary ? 0 : secondarySemester;
 
-  const charAvgByStudent = new Map<string, number>();
+  // คุณลักษณะ / อ่าน-คิด-เขียน — สรุประดับด้วย "ฐานนิยม" (มี 0 = ไม่ผ่าน)
+  // เก็บเป็น level (0-3) ต่อนักเรียน ไม่ใช่ค่าเฉลี่ย
+  const charLevelByStudent = new Map<string, number>();
   if (studentIds.length > 0) {
     const { data: chars } = await supabase
       .from("characteristics")
@@ -519,21 +523,21 @@ export default async function Pp6Page({ searchParams }: Props) {
         .eq("semester", evalSemester)
         .in("student_id", studentIds)
         .in("characteristic_id", charIds);
-      const sums = new Map<string, { sum: number; n: number }>();
+      const scoresByStudent = new Map<string, number[]>();
       for (const e of evals ?? []) {
         if (e.score == null) continue;
-        const cur = sums.get(e.student_id) ?? { sum: 0, n: 0 };
-        cur.sum += Number(e.score);
-        cur.n += 1;
-        sums.set(e.student_id, cur);
+        const arr = scoresByStudent.get(e.student_id) ?? [];
+        arr.push(Number(e.score));
+        scoresByStudent.set(e.student_id, arr);
       }
-      for (const [sid, { sum, n }] of sums) {
-        if (n > 0) charAvgByStudent.set(sid, sum / n);
+      for (const [sid, arr] of scoresByStudent) {
+        const level = overallEvalLevel(arr);
+        if (level != null) charLevelByStudent.set(sid, level);
       }
     }
   }
 
-  const readingAvgByStudent = new Map<string, number>();
+  const readingLevelByStudent = new Map<string, number>();
   if (studentIds.length > 0) {
     const { data: evals } = await supabase
       .from("reading_thinking_evaluations")
@@ -542,16 +546,12 @@ export default async function Pp6Page({ searchParams }: Props) {
       .eq("semester", evalSemester)
       .in("student_id", studentIds);
     for (const e of evals ?? []) {
-      const vs = [
+      const level = overallEvalLevel([
         e.reading_score == null ? null : Number(e.reading_score),
         e.thinking_score == null ? null : Number(e.thinking_score),
         e.writing_score == null ? null : Number(e.writing_score),
-      ].filter((v): v is number => v != null);
-      if (vs.length === 0) continue;
-      readingAvgByStudent.set(
-        e.student_id,
-        vs.reduce((a, b) => a + b, 0) / vs.length,
-      );
+      ]);
+      if (level != null) readingLevelByStudent.set(e.student_id, level);
     }
   }
 
@@ -674,8 +674,8 @@ export default async function Pp6Page({ searchParams }: Props) {
       coreHours,
       additionalHours,
       activityHours,
-      charSummary: summaryFromAvg(charAvgByStudent.get(stu.id) ?? null),
-      readingSummary: summaryFromAvg(readingAvgByStudent.get(stu.id) ?? null),
+      charSummary: evalLevelLabel(charLevelByStudent.get(stu.id) ?? null),
+      readingSummary: evalLevelLabel(readingLevelByStudent.get(stu.id) ?? null),
       activityResult,
     };
   });

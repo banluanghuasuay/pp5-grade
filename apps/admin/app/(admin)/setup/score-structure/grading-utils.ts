@@ -87,3 +87,37 @@ export function abbreviateTitle(title: string | null | undefined): string {
   if (title === "นางสาว") return "น.ส.";
   return title;
 }
+
+/**
+ * Overall สพฐ evaluation level (0-3) from sub-scores (คุณลักษณะ / อ่าน-คิด-เขียน
+ * / สมรรถนะ). User rule 2026-06-05: any sub-score of 0 → 0 (ไม่ผ่าน); otherwise
+ * the MODE (ฐานนิยม) of the scores; on a tie → the higher level. null when
+ * there are no scores. (Replaces the earlier AVERAGE-based summary.)
+ */
+export function overallEvalLevel(
+  scores: Array<number | null | undefined>,
+): number | null {
+  const valid = scores.filter((n): n is number => typeof n === "number");
+  if (valid.length === 0) return null;
+  if (valid.some((n) => n === 0)) return 0;
+  const counts = new Map<number, number>();
+  for (const n of valid) counts.set(n, (counts.get(n) ?? 0) + 1);
+  let best = -1;
+  let bestCount = -1;
+  for (const [val, cnt] of counts) {
+    if (cnt > bestCount || (cnt === bestCount && val > best)) {
+      best = val;
+      bestCount = cnt;
+    }
+  }
+  return best;
+}
+
+/** Eval level (0-3) → สพฐ label. null → "—". */
+export function evalLevelLabel(level: number | null): string {
+  if (level == null) return "—";
+  if (level >= 3) return "ดีเยี่ยม";
+  if (level === 2) return "ดี";
+  if (level === 1) return "ผ่าน";
+  return "ไม่ผ่าน";
+}

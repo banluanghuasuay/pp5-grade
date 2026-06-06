@@ -8,7 +8,11 @@ import {
   resolveCalendarYear,
 } from "../../setup/attendance/calendar";
 import { AttendanceSummarySection } from "../../setup/attendance/summary-section";
-import { abbreviateTitle, cutGrade } from "../../setup/score-structure/grading-utils";
+import {
+  abbreviateTitle,
+  cutGrade,
+  overallEvalLevel,
+} from "../../setup/score-structure/grading-utils";
 import { NumericTable, PrimaryAnnualSummary, PassFailTable } from "../_shared/score-report";
 import { EvalSection } from "../pp5/page";
 import type { Metadata } from "next";
@@ -465,11 +469,12 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
     fail: 0,
     total: studentIds.length,
   });
-  const bucketAvg = (avg: number | null, b: EvalBuckets) => {
-    if (avg == null) return;
-    if (avg >= 2.5) b.excellent++;
-    else if (avg >= 1.5) b.good++;
-    else if (avg >= 0.5) b.pass++;
+  // ระดับด้วยฐานนิยม (มี 0 = ไม่ผ่าน) แล้ว bucket ตามระดับ 3/2/1/0
+  const bucketLevel = (level: number | null, b: EvalBuckets) => {
+    if (level == null) return;
+    if (level >= 3) b.excellent++;
+    else if (level === 2) b.good++;
+    else if (level === 1) b.pass++;
     else b.fail++;
   };
 
@@ -499,7 +504,7 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
         .eq("semester", evalSemester)
         .in("student_id", studentIds)
         .in("characteristic_id", charIds);
-      const sums = new Map<string, { sum: number; n: number }>();
+      const scoresByStudent = new Map<string, number[]>();
       for (const e of evals ?? []) {
         if (e.score == null) continue;
         // Per-student map (for EvalSection)
@@ -509,15 +514,16 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
           charEvalMap.set(e.student_id, inner);
         }
         inner.set(e.characteristic_id, Number(e.score));
-        // Running sum for cover bucket distribution
-        const cur = sums.get(e.student_id) ?? { sum: 0, n: 0 };
-        cur.sum += Number(e.score);
-        cur.n += 1;
-        sums.set(e.student_id, cur);
+        // Collect scores for the mode-based cover distribution
+        const arr = scoresByStudent.get(e.student_id) ?? [];
+        arr.push(Number(e.score));
+        scoresByStudent.set(e.student_id, arr);
       }
       for (const sid of studentIds) {
-        const s = sums.get(sid);
-        bucketAvg(s ? s.sum / s.n : null, charBuckets);
+        bucketLevel(
+          overallEvalLevel(scoresByStudent.get(sid) ?? []),
+          charBuckets,
+        );
       }
     }
   }
@@ -543,19 +549,15 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
         thinking: e.thinking_score == null ? null : Number(e.thinking_score),
         writing: e.writing_score == null ? null : Number(e.writing_score),
       });
-      const vs = [
+      const level = overallEvalLevel([
         e.reading_score == null ? null : Number(e.reading_score),
         e.thinking_score == null ? null : Number(e.thinking_score),
         e.writing_score == null ? null : Number(e.writing_score),
-      ].filter((v): v is number => v != null);
-      if (vs.length === 0) continue;
-      byStudent.set(
-        e.student_id,
-        vs.reduce((a, b) => a + b, 0) / vs.length,
-      );
+      ]);
+      if (level != null) byStudent.set(e.student_id, level);
     }
     for (const sid of studentIds) {
-      bucketAvg(byStudent.get(sid) ?? null, rtBuckets);
+      bucketLevel(byStudent.get(sid) ?? null, rtBuckets);
     }
   }
 
@@ -597,7 +599,7 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
         technology:
           e.technology_score == null ? null : Number(e.technology_score),
       });
-      const vs = [
+      const level = overallEvalLevel([
         e.communication_score == null ? null : Number(e.communication_score),
         e.thinking_score == null ? null : Number(e.thinking_score),
         e.problem_solving_score == null
@@ -605,15 +607,11 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
           : Number(e.problem_solving_score),
         e.life_skills_score == null ? null : Number(e.life_skills_score),
         e.technology_score == null ? null : Number(e.technology_score),
-      ].filter((v): v is number => v != null);
-      if (vs.length === 0) continue;
-      byStudent.set(
-        e.student_id,
-        vs.reduce((a, b) => a + b, 0) / vs.length,
-      );
+      ]);
+      if (level != null) byStudent.set(e.student_id, level);
     }
     for (const sid of studentIds) {
-      bucketAvg(byStudent.get(sid) ?? null, compBuckets);
+      bucketLevel(byStudent.get(sid) ?? null, compBuckets);
     }
   }
 

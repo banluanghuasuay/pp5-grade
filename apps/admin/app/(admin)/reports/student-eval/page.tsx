@@ -1,6 +1,10 @@
 import { createClient } from "@pp5/database/server";
 import Link from "next/link";
-import { abbreviateTitle } from "../../setup/score-structure/grading-utils";
+import {
+  abbreviateTitle,
+  evalLevelLabel,
+  overallEvalLevel,
+} from "../../setup/score-structure/grading-utils";
 import { PrintButton } from "../pp5/print-button";
 import type { Metadata } from "next";
 import {
@@ -500,7 +504,6 @@ export default async function StudentEvalReportPage({ searchParams }: Props) {
               const scores = s
                 ? (scoresByStudent.get(s.id) ?? columns.map(() => null))
                 : [];
-              const avg = s ? avgOf(scores) : null;
               return (
                 <tr key={`r-${rowNum}`}>
                   <td>{rowNum}</td>
@@ -510,7 +513,13 @@ export default async function StudentEvalReportPage({ searchParams }: Props) {
                       {s ? scoreToLabel(scores[idx] ?? null) : ""}
                     </td>
                   ))}
-                  <td>{s ? <strong>{summaryFromAvg(avg)}</strong> : ""}</td>
+                  <td>
+                    {s ? (
+                      <strong>{evalLevelLabel(overallEvalLevel(scores))}</strong>
+                    ) : (
+                      ""
+                    )}
+                  </td>
                 </tr>
               );
             })}
