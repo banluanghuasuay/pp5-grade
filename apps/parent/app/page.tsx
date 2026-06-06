@@ -6,9 +6,9 @@ import { logoutAction } from "./_actions/auth";
 import { LogoutButton } from "./_components/logout-button";
 import {
   buildTermReport,
-  deriveTerms,
-  fetchStudentGrades,
   fetchTermEvals,
+  fetchTermSubjects,
+  fetchTerms,
   levelLabel,
   pickTerm,
 } from "./_data/report-card";
@@ -48,11 +48,15 @@ export default async function Home({
 
   const { student } = auth;
 
-  const grades = await fetchStudentGrades(student.id);
-  const terms = deriveTerms(grades);
+  const terms = await fetchTerms(student.id);
   const { term: termKey } = await searchParams;
   const term = pickTerm(terms, termKey);
-  const report = term ? buildTermReport(grades, term) : null;
+  const curriculum = term?.studyPlanId
+    ? await fetchTermSubjects(term.studyPlanId, term.yearId, term.semester)
+    : [];
+  const report = term
+    ? await buildTermReport(student.id, curriculum, term)
+    : null;
   const evals = term
     ? await fetchTermEvals(student.id, term.yearId, term.semester)
     : null;
@@ -111,9 +115,9 @@ export default async function Home({
             padding={false}
             className="rounded-lg p-5 text-center text-sm text-zinc-500"
           >
-            ยังไม่มีผลการเรียนที่ประกาศ
+            ยังไม่มีข้อมูลการลงทะเบียนเรียน
             <br />
-            จะแสดงเมื่อครูบันทึกและประกาศผลแล้ว
+            ติดต่อครูประจำชั้นหรือผู้ดูแลระบบ
           </Card>
         ) : (
           <Card className="rounded-lg p-5 shadow-sm" padding={false}>
@@ -124,7 +128,7 @@ export default async function Home({
 
             {!hasSubjects ? (
               <p className="mt-4 text-sm text-zinc-500">
-                ภาคเรียนนี้ยังไม่มีรายวิชาที่มีผลการเรียน
+                ยังไม่มีรายวิชาในแผนการเรียนของภาคเรียนนี้
               </p>
             ) : (
               <table className="mt-4 w-full text-sm">
@@ -191,7 +195,7 @@ export default async function Home({
               </div>
             )}
 
-            {report.numeric.length > 0 && (
+            {report.gradedCount > 0 && (
               <div className="mt-6 flex items-center justify-between rounded-lg bg-pink-50 px-4 py-3">
                 <span className="text-sm font-medium text-pink-900">
                   ผลการเรียนเฉลี่ย (GPA)
