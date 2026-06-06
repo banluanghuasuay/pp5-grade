@@ -1,8 +1,9 @@
 import { getCurrentStudent } from "@pp5/database/queries";
-import { Button, Card } from "@pp5/ui";
+import { Card } from "@pp5/ui";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logoutAction } from "./_actions/auth";
+import { LogoutButton } from "./_components/logout-button";
 import {
   buildTermReport,
   deriveTerms,
@@ -75,9 +76,7 @@ export default async function Home({
               เปลี่ยนรหัสผ่าน
             </Link>
             <form action={logoutAction}>
-              <Button type="submit" variant="secondary" size="sm">
-                ออกจากระบบ
-              </Button>
+              <LogoutButton />
             </form>
           </div>
         </div>

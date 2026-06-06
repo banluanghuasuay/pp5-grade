@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button, Field, Input } from "@pp5/ui";
-import { School } from "lucide-react";
+import { Loader2, School } from "lucide-react";
 import { loginAction, type LoginState } from "./actions";
 
 const initialState: LoginState = { error: null };
@@ -22,13 +22,19 @@ function SubmitButton() {
   // would otherwise land in the output and lose to source-order luck.
   // `!text-white` is explicit per user spec ("ข้อความใช้สีขาว") to
   // prevent any future override from changing it.
+  // Render the spinner + label in our OWN inline-flex span (instead of
+  // Button's `pending` slot) so they stay on one line and the button height
+  // doesn't change between states.
   return (
     <Button
       type="submit"
-      pending={pending}
+      disabled={pending}
       className="w-full px-4 py-3 text-base !bg-pink-700 !text-white hover:!bg-pink-800 focus:!ring-pink-700"
     >
-      {pending ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+      <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap">
+        {pending && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />}
+        {pending ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+      </span>
     </Button>
   );
 }
