@@ -1,6 +1,6 @@
 # 📋 Setup Progress — ระบบ ปพ.5
 
-> สถานะการ setup โปรเจกต์ · อัปเดต **2026-06-05 (Multi-tenant deploy ครบ · report room-suffix · in-app update banner)**
+> สถานะการ setup โปรเจกต์ · อัปเดต **2026-06-06 (ส่วนนักเรียน: รหัสผ่าน+เปลี่ยนรหัส · ปพ.6 จอ · ระดับประเมิน=ฐานนิยม)**
 > ✅ Phase 0 · ✅ Phase 1 ครบ · ✅ B Design Polish · ✅ Phase 2.1.A-C Subjects+Plans · ✅ Phase 2.2 จัดครู · ✅ Phase 2.3 บันทึกคะแนน · ✅ Phase 2.4 สรุปผล/ตัดเกรด · ✅ Phase 2.5 บันทึกเวลาเรียน · ✅ ตั้งค่าวันหยุด · ✅ Phase 2.6 Current Term Lock · ✅ Phase 2.7 ประเมินตามหลักสูตร · ✅ Phase 4A-B Secondary Score Grid · ✅ Subjects per-(year, semester) + clone-from-prev · ✅ Excel import auto-semester + re-enroll · ✅ Attendance term-lock policy · ✅ Subject-attendance "รายวิชา" page · ✅ Cell dropdown UX + status "ข" · ✅ Plan-based subject fetch + nullable teacher · ✅ **Phase 3A: ปพ.5 รายวิชา (cover + split-preview + section toggles)** · ✅ **Print: subject-attendance (2-page weekly grid)** · 🎯 ถัดไป: Phase 3B (ปพ.5 รวมชั้น) หรือ Phase 4 polish
 >
 > **⚠️ Migrations ที่ต้องรันที่ Dashboard:** `20260517e_offerings_nullable_teacher.sql` + `20260517f_schools_district_province.sql` (ค้าง 2 ตัว · 4 ตัวก่อนหน้า apply แล้ว)
@@ -4277,6 +4277,43 @@ Vercel region → **sin1** (Singapore) ให้ตรงกับ Supabase ap-s
 - report room-suffix: helper นับห้อง (RLS is_staff อ่านได้หมด) · splice `${await reportRoomSuffix(id)}` ใน classLabel
 - prod 2 ตัว: pp5-grade-admin / pp5-grade-parent.vercel.app · repo PUBLIC · fork = แต่ละโรงเรียน
 - การ release: bump `apps/admin/version.json` → push main → fork เห็นแถบใน ~1h → Sync fork เอง
+
+---
+
+## ✅ ส่วนนักเรียน (apps/parent) + ระดับประเมินเป็นฐานนิยม (2026-06-06 Opus)
+
+### A. รหัสผ่านนักเรียน default = 123456 + เปลี่ยนรหัสเอง
+- สร้างนักเรียน (เดี่ยว + Excel) ตั้ง password = `123456` อัตโนมัติ (เดิม admin พิมพ์เอง / รหัส+เติม0)
+  · ฟอร์มเพิ่มนักเรียนเอาช่องรหัสผ่านออก → โน้ต "default 123456" · `DEFAULT_STUDENT_PASSWORD`
+- `apps/parent/app/change-password/` — นักเรียนเปลี่ยนรหัสเอง (`supabase.auth.updateUser`) + ลิงก์ header
+- username = รหัสนักเรียน (มีอยู่แล้ว: `<code>@student.pp5.local`) · `1c1fdbb`
+
+### B. หน้าหลักนักเรียน = ปพ.6 ของตัวเอง (จอ) — 3a · `34c305f`
+- `apps/parent/app/_data/report-card.ts` — อ่าน `grades` ที่ finalize แล้ว (RLS student_read_own) +
+  master tables (subjects/grade_levels/academic_years = `USING TRUE`) ผ่าน embed เดียว
+  · นักเรียนอ่านคะแนนดิบ (`scores`) ไม่ได้ → ใช้เกรดสำเร็จจาก `grades` ไม่ต้อง recompute
+- เลือกเทอม (year+semester · default ล่าสุด) · ตารางวิชา+เกรด + กิจกรรม(ผ/มผ) · ผลประเมิน · GPA ล่างสุด
+- GPA = Σ(grade×weight)/Σ(weight) · weight ประถม=hours_per_year/40 มัธยม=credit_hours · ไม่มีอันดับ
+
+### C. ⭐ ระดับประเมิน = ฐานนิยม (mode) ไม่ใช่ค่าเฉลี่ย — กฎสำคัญ · `df7bde1`
+**User spec:** ผลประเมิน 3 ด้าน สรุประดับด้วย**ฐานนิยม** · มี 0 แม้ข้อเดียว = ไม่ผ่าน · เสมอ/ไม่มีตัวซ้ำ = สูงกว่า
+- เดิม admin ใช้**ค่าเฉลี่ย** (`summaryFromAvg`) = **ผิด** → helper กลาง `overallEvalLevel`+`evalLevelLabel`
+  ใน `grading-utils.ts` · แก้ pp5 (distribution+summary) · pp5-class (distribution) · pp6 · student-eval
+- dead code เก่า (summaryFromAvg/avgOf) เหลือใน 3 ไฟล์ → task `task_39b62f36` ลบทีหลัง
+
+### D. แก้ปุ่ม login/logout (apps/parent) · `92c7a96`
+- login: spinner+ข้อความคนละบรรทัด → render เองใน `<span inline-flex>` (ไม่พึ่ง Button.pending)
+- logout: เพิ่มสถานะ "กำลังออก..." (LogoutButton + useFormStatus)
+
+### ⏳ เหลือ / ค้าง
+1. **3b — ฟอร์ม ปพ.6 ทางการ (พิมพ์ได้)** ในแอปนักเรียน (ต้องแชร์/replicate component จาก admin)
+2. **#2 เช็ค: นักเรียน 4064 ผลการเรียนไม่แสดง** — RLS ดูถูก (`grades_student_read_finalized` =
+   `student_id=current_student_id() AND finalized_at IS NOT NULL` · `current_student_id()` =
+   students.id WHERE auth_user_id=auth.uid()) → น่าจะ**ยังไม่มีเกรด finalize** (โรงเรียนใหม่ยังไม่ตัดเกรด)
+   · diagnostic: `SELECT g.finalized_at, s.code FROM grades g JOIN subject_offerings o ON g.offering_id=o.id
+   JOIN subjects s ON o.subject_id=s.id JOIN students st ON g.student_id=st.id WHERE st.student_code='4064';`
+   · ถ้ามี finalized แต่ไม่แสดง = บั๊ก embed/RLS ค่อยขุด
+3. ทดสอบ 3a + ฐานนิยม กับข้อมูลจริง (login นักเรียนที่มีเกรด finalize + ประเมิน)
 
 
 
