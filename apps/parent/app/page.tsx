@@ -1,5 +1,6 @@
 import { getCurrentStudent } from "@pp5/database/queries";
 import { Button, Card } from "@pp5/ui";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logoutAction } from "./_actions/auth";
 
@@ -23,11 +24,19 @@ export default async function Home() {
             <h1 className="text-base font-bold sm:text-lg">ระบบรายงานผลการเรียน</h1>
             <p className="text-xs text-zinc-500">นักเรียนและผู้ปกครอง</p>
           </div>
-          <form action={logoutAction}>
-            <Button type="submit" variant="secondary" size="sm">
-              ออกจากระบบ
-            </Button>
-          </form>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/change-password"
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100"
+            >
+              เปลี่ยนรหัสผ่าน
+            </Link>
+            <form action={logoutAction}>
+              <Button type="submit" variant="secondary" size="sm">
+                ออกจากระบบ
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
 

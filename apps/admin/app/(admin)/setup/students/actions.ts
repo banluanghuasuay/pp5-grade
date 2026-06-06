@@ -7,6 +7,10 @@ import { redirect } from "next/navigation";
 
 const STUDENT_DOMAIN = "student.pp5.local";
 
+/** Default password for every new student (single-add + Excel import).
+ *  Students change it themselves later in the student app. User spec 2026-06-05. */
+const DEFAULT_STUDENT_PASSWORD = "123456";
+
 export type StudentFormState = {
   error: string | null;
   fieldErrors?: {
@@ -196,7 +200,7 @@ export async function createStudent(
   const guard = await ensureAdmin();
   if (guard) return guard;
 
-  const parsed = parseForm(formData, true);
+  const parsed = parseForm(formData, false);
   if (!parsed.ok) return parsed.state;
   const v = parsed.values;
 
@@ -207,7 +211,7 @@ export async function createStudent(
   const { data: authData, error: authError } =
     await admin.auth.admin.createUser({
       email,
-      password: v.password,
+      password: DEFAULT_STUDENT_PASSWORD,
       email_confirm: true,
     });
 

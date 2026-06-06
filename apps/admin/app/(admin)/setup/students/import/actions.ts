@@ -116,9 +116,11 @@ function gradeKey(raw: string): string {
   return raw.trim().replace(/[.\s]/g, "");
 }
 
-/** student_code padded with leading zeros to satisfy Supabase 6-char min. */
-function defaultPassword(code: string): string {
-  return code.length >= 6 ? code : code.padStart(6, "0");
+/** Default password for every new student — fixed "123456" (meets Supabase
+ *  6-char min). Students change it themselves later in the student app.
+ *  User spec 2026-06-05 (was student_code padded). */
+function defaultPassword(): string {
+  return "123456";
 }
 
 /** Get cell value as a clean string (handles number/Date/RichText). */
@@ -635,7 +637,7 @@ export async function commitStudentImportBatch(
     } else {
       // Step 1: auth user
       const email = `${r.student_code}@${STUDENT_DOMAIN}`;
-      const password = defaultPassword(r.student_code);
+      const password = defaultPassword();
       const { data: authData, error: authError } =
         await admin.auth.admin.createUser({
           email,

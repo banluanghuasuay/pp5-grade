@@ -113,21 +113,10 @@ export function StudentForm({
           </Field>
 
           {showPassword && (
-            <Field
-              label="รหัสผ่าน"
-              required
-              error={state.fieldErrors?.password}
-              hint="อย่างน้อย 6 ตัว · admin บอกให้ผู้ปกครองได้"
-            >
-              <Input
-                name="password"
-                required
-                autoComplete="new-password"
-                minLength={6}
-                placeholder="••••••"
-                invalid={!!state.fieldErrors?.password}
-              />
-            </Field>
+            <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">
+              รหัสผ่านเริ่มต้น{" "}
+              <strong className="font-mono">123456</strong> — นักเรียนเปลี่ยนเองได้ภายหลังในแอปนักเรียน
+            </div>
           )}
         </div>
       </fieldset>
