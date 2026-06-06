@@ -1,24 +1,21 @@
 "use client";
 
 import { Sparkles, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { UpdateStatus } from "@/lib/version-check";
 
 /**
- * Dismissible "new version available" banner.
+ * "New version available" banner.
  *
- * Dismissal is per-version (localStorage key includes the latest version) — so
- * dismissing v1.1.0 hides it until v1.2.0 ships, then it shows again. Starts
- * hidden and reveals after mount so there's no SSR/hydration mismatch (the
- * server can't read localStorage).
+ * Dismiss is SESSION-STATE ONLY (not persisted) — closing it hides the banner
+ * for the current app session, but it reappears on the next full load / app
+ * reopen, so an outdated school keeps getting nudged. Within a session the
+ * (admin) layout stays mounted across client navigation, so this state survives
+ * page-to-page moves but resets on reload. The dashboard VersionStatus line is
+ * the always-on backstop.
  */
 export function UpdateBannerClient({ status }: { status: UpdateStatus }) {
-  const storageKey = `pp5-update-dismissed-${status.latest}`;
-  const [hidden, setHidden] = useState(true);
-
-  useEffect(() => {
-    setHidden(localStorage.getItem(storageKey) === "1");
-  }, [storageKey]);
+  const [hidden, setHidden] = useState(false);
 
   if (hidden) return null;
 
@@ -40,12 +37,9 @@ export function UpdateBannerClient({ status }: { status: UpdateStatus }) {
         </div>
         <button
           type="button"
-          onClick={() => {
-            localStorage.setItem(storageKey, "1");
-            setHidden(true);
-          }}
+          onClick={() => setHidden(true)}
           className="shrink-0 rounded p-1 text-emerald-600 hover:bg-emerald-100"
-          aria-label="ปิดการแจ้งเตือน"
+          aria-label="ปิดการแจ้งเตือน (จะแสดงอีกเมื่อเปิดแอปใหม่)"
         >
           <X className="size-4" />
         </button>
