@@ -260,7 +260,8 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
             sort_order,
             subject:subjects!subject_id (
               id, code, name_th, category, grading_mode, credit_hours,
-              hours_per_year, semester, academic_year_id
+              hours_per_year, semester, academic_year_id,
+              learning_area:learning_areas!learning_area_id ( sort_order )
             )
           `,
           )
@@ -286,6 +287,7 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
       grading_mode: "numeric" | "pass_fail";
       credit_hours: number | null;
       hours_per_year: number | null;
+      learningAreaSort: number; // กลุ่มสาระ (1-9) สำหรับเรียงลำดับ
       offeringIds: string[]; // all offerings for this subject in this class
     }
   >();
@@ -305,6 +307,7 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
       hours_per_year: number | null;
       semester: number;
       academic_year_id: string;
+      learning_area: { sort_order: number } | null;
     } | null;
     if (!s) continue;
     if (s.academic_year_id !== yearId) continue;
@@ -318,6 +321,7 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
       grading_mode: s.grading_mode,
       credit_hours: s.credit_hours,
       hours_per_year: s.hours_per_year,
+      learningAreaSort: s.learning_area?.sort_order ?? 999,
       offeringIds: [],
     });
   }
@@ -332,7 +336,21 @@ export default async function Pp5ClassPage({ searchParams }: Props) {
     entry.offeringIds.push(o.id);
   }
 
-  const subjects = Array.from(subjectMap.values());
+  // เรียงวิชา: พื้นฐาน (core) → เพิ่มเติม (additional) → กิจกรรม (activity)
+  // ในแต่ละประเภทเรียงตามกลุ่มสาระ (learning_areas.sort_order) แล้วตามรหัสวิชา
+  const CATEGORY_ORDER: Record<"core" | "additional" | "activity", number> = {
+    core: 0,
+    additional: 1,
+    activity: 2,
+  };
+  const subjects = Array.from(subjectMap.values()).sort((a, b) => {
+    const byCat = CATEGORY_ORDER[a.category] - CATEGORY_ORDER[b.category];
+    if (byCat !== 0) return byCat;
+    if (a.learningAreaSort !== b.learningAreaSort) {
+      return a.learningAreaSort - b.learningAreaSort;
+    }
+    return a.code.localeCompare(b.code, "th");
+  });
 
   // 6. Total instructional hours per year — derivation depends on system:
   //     Primary   → ทุกวิชา (core/additional + activity) เก็บใน
