@@ -786,6 +786,7 @@ export type Database = {
           director_title: string | null
           district: string | null
           id: string
+          license_key: string | null
           logo_url: string | null
           name_en: string | null
           name_th: string
@@ -804,6 +805,7 @@ export type Database = {
           director_title?: string | null
           district?: string | null
           id?: string
+          license_key?: string | null
           logo_url?: string | null
           name_en?: string | null
           name_th: string
@@ -822,6 +824,7 @@ export type Database = {
           director_title?: string | null
           district?: string | null
           id?: string
+          license_key?: string | null
           logo_url?: string | null
           name_en?: string | null
           name_th?: string

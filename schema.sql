@@ -89,6 +89,7 @@ CREATE TABLE schools (
     deputy_director_name      VARCHAR(255),                       -- ชื่อ รอง ผอ. (ถ้ามี)
     academic_head_name        VARCHAR(255),                       -- ชื่อหัวหน้าฝ่ายวิชาการ (ใช้ใน ปพ.5 รวมห้อง)
     assessment_officer_name   VARCHAR(255),                       -- ชื่อหัวหน้างานวัดผล (ใช้ใน ปพ.5)
+    license_key     TEXT,                                       -- JWT license key (กรอกผ่านหน้า /license)
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );

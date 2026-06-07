@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@pp5/database/queries";
 import { createClient } from "@pp5/database/server";
+import { verifyLicense } from "../../lib/license";
 import { Card } from "@pp5/ui";
 import {
   Activity,
@@ -216,6 +217,8 @@ export default async function Dashboard() {
   // Defensive — proxy.ts should already redirect
   const auth = await getCurrentUser();
   if (!auth) redirect("/login");
+
+  const license = await verifyLicense();
 
   const isAdmin = auth.profile.role === "admin";
   const supabase = await createClient();
@@ -478,6 +481,28 @@ export default async function Dashboard() {
               </p>
             </div>
           )}
+        </div>
+
+        {/* License badge */}
+        <div className="mt-4 flex justify-end">
+          {license.valid && license.payload.plan === "paid" ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+              ลิขสิทธิ์ถาวร
+            </span>
+          ) : license.valid && license.payload.plan === "trial" ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/30 px-3 py-1 text-xs font-medium text-amber-100 backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />
+              ทดลองใช้ · หมดอายุ{" "}
+              {license.payload.exp
+                ? new Date(license.payload.exp * 1000).toLocaleDateString("th-TH", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "—"}
+            </span>
+          ) : null}
         </div>
       </div>
 
