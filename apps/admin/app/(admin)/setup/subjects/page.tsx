@@ -6,12 +6,12 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { requireAdmin } from "@/lib/teacher-scope";
 import { FilterNavProvider } from "../_components/filter-nav-context";
-import { assignRoomToPlan, ensureDefaultPlan, ensureRoomsLinked } from "./actions";
+import { ensureDefaultPlan, ensureRoomsLinked } from "./actions";
 import { CloneSubjectsDialog } from "./clone-subjects-dialog";
 import { CopyPlanButton } from "./copy-plan-button";
 import { DeletePlanForm } from "./delete-plan-form";
 import { DeleteSubjectForm } from "./delete-subject-form";
-import { GradeRoomSelector, type RoomOption } from "./grade-room-selector";
+import { GradeRoomSelector } from "./grade-room-selector";
 import { NavigationGate } from "./navigation-gate";
 import { SubjectsSkeleton } from "./subjects-skeleton";
 
@@ -241,21 +241,6 @@ export default async function SubjectsPage({ searchParams }: Props) {
     await ensureRoomsLinked(selectedGrade.id, currentYear.id, defaultPlanId);
   }
 
-  // 5.5 Fetch classrooms for this grade+year (room dropdown + per-plan badges).
-  //     Done AFTER ensureRoomsLinked so study_plan_id is always populated.
-  const { data: classroomsRaw } = await supabase
-    .from("classrooms")
-    .select("id, room_number, study_plan_id")
-    .eq("grade_level_id", selectedGrade.id)
-    .eq("academic_year_id", currentYear.id)
-    .order("room_number");
-
-  const rooms: RoomOption[] = (classroomsRaw ?? []).map((c) => ({
-    id: c.id,
-    label: `${selectedGrade.name_short}/${c.room_number}`,
-    planId: c.study_plan_id,
-  }));
-
   // 6. Fetch plans + subject counts (for left column).
   //    Counts only include subjects scoped to the current (year, semester).
   const admin = createAdminClient();
@@ -326,12 +311,12 @@ export default async function SubjectsPage({ searchParams }: Props) {
           gate (reads pending) so a grade/room change paints the skeleton
           instantly. */}
       <FilterNavProvider>
-      {/* Grade + room selector — room dropdown appears when grade has 2+ rooms */}
+      {/* Grade selector only — plans are per-grade, room dropdown not needed here */}
       <div className="mb-6">
         <GradeRoomSelector
           grades={openGrades.map((g) => ({ id: g.id, label: g.name_short }))}
           selectedGradeId={selectedGrade.id}
-          rooms={rooms}
+          rooms={[]}
           selectedPlanId={selectedPlan.id}
         />
       </div>
@@ -352,102 +337,49 @@ export default async function SubjectsPage({ searchParams }: Props) {
               const isActive = p.id === selectedPlan.id;
               const subjectCount = subjectCountByPlan.get(p.id) ?? 0;
               const wrapClass = isActive
-                ? "rounded-md border-2 border-amber-400 bg-amber-50 shadow-sm overflow-hidden"
-                : "rounded-md border border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50 overflow-hidden";
+                ? "flex rounded-md border-2 border-amber-400 bg-amber-50 shadow-sm"
+                : "flex rounded-md border border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50";
               return (
                 <div key={p.id} className={wrapClass}>
-                  {/* ── Top row: plan name + edit/delete ── */}
-                  <div className="flex">
-                    <Link
-                      href={`/setup/subjects?grade=${selectedGrade.id}&plan=${p.id}`}
-                      className="min-w-0 flex-1 p-3"
-                      aria-current={isActive ? "page" : undefined}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <p
-                          className={
-                            isActive
-                              ? "font-semibold text-amber-900"
-                              : "font-medium text-zinc-900"
-                          }
-                        >
-                          {p.name}
-                        </p>
-                        {p.is_default && (
-                          <Badge variant="info">default</Badge>
-                        )}
-                      </div>
-                      <p className="mt-0.5 text-xs text-zinc-500">
-                        {subjectCount} วิชา
-                      </p>
-                    </Link>
-                    <div className="flex shrink-0 items-center gap-0.5 pr-2">
-                      <Link
-                        href={`/setup/subjects/plans/${p.id}`}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-primary-600"
-                        title="แก้ไขแผน"
-                        aria-label={`แก้ไขแผน ${p.name}`}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Link>
-                      <DeletePlanForm
-                        planId={p.id}
-                        gradeLevelId={selectedGrade.id}
-                        planName={p.name}
-                        subjectCount={subjectCount}
-                      />
-                    </div>
-                  </div>
-
-                  {/* ── Room badges (only when grade has 2+ rooms) ──
-                       Amber badge = ห้องนี้ใช้แผนนี้อยู่
-                       Dashed button = คลิกเพื่อย้ายห้องนั้นมาแผนนี้ */}
-                  {rooms.length > 1 && (
-                    <div className="flex flex-wrap items-center gap-1 border-t border-zinc-200/70 px-3 py-1.5">
-                      <span className="mr-0.5 text-[11px] text-zinc-400">
-                        ห้อง:
-                      </span>
-                      {rooms.map((room) => {
-                        const roomNum = room.label.split("/").pop() ?? "";
-                        if (room.planId === p.id) {
-                          return (
-                            <span
-                              key={room.id}
-                              className="rounded-full bg-amber-200 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
-                            >
-                              /{roomNum}
-                            </span>
-                          );
+                  <Link
+                    href={`/setup/subjects?grade=${selectedGrade.id}&plan=${p.id}`}
+                    className="min-w-0 flex-1 p-3"
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <p
+                        className={
+                          isActive
+                            ? "font-semibold text-amber-900"
+                            : "font-medium text-zinc-900"
                         }
-                        return (
-                          <form key={room.id} action={assignRoomToPlan}>
-                            <input
-                              type="hidden"
-                              name="room_id"
-                              value={room.id}
-                            />
-                            <input
-                              type="hidden"
-                              name="plan_id"
-                              value={p.id}
-                            />
-                            <input
-                              type="hidden"
-                              name="grade_level_id"
-                              value={selectedGrade.id}
-                            />
-                            <button
-                              type="submit"
-                              title={`ย้ายห้อง ${room.label} มาใช้แผน${p.name}`}
-                              className="rounded-full border border-dashed border-zinc-300 px-2 py-0.5 text-[11px] text-zinc-400 transition-colors hover:border-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
-                            >
-                              /{roomNum}
-                            </button>
-                          </form>
-                        );
-                      })}
+                      >
+                        {p.name}
+                      </p>
+                      {p.is_default && (
+                        <Badge variant="info">default</Badge>
+                      )}
                     </div>
-                  )}
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      {subjectCount} วิชา
+                    </p>
+                  </Link>
+                  <div className="flex shrink-0 items-center gap-0.5 pr-2">
+                    <Link
+                      href={`/setup/subjects/plans/${p.id}`}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-primary-600"
+                      title="แก้ไขแผน"
+                      aria-label={`แก้ไขแผน ${p.name}`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Link>
+                    <DeletePlanForm
+                      planId={p.id}
+                      gradeLevelId={selectedGrade.id}
+                      planName={p.name}
+                      subjectCount={subjectCount}
+                    />
+                  </div>
                 </div>
               );
             })}
