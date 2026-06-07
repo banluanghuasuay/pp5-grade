@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { logoutAction } from "../_actions/auth";
 import { UpdateBanner } from "./_components/update-banner";
+import { LicenseBanner } from "./_components/license-banner";
 import { MobileHeader } from "./_components/mobile-header";
 import { MobileNavProvider } from "./_components/mobile-nav-context";
 import { NavigationOverlay } from "./_components/navigation-overlay";
@@ -33,8 +34,13 @@ export default async function AppLayout({
   // flash on initial iframe load before the page's <style display:none>
   // rules parse and hide it. This guarantees zero chrome from server-
   // render onwards.
-  const embed = (await headers()).get("x-pp5-embed") === "1";
+  const headersList = await headers();
+  const embed = headersList.get("x-pp5-embed") === "1";
   if (embed) return <>{children}</>;
+
+  const accessLevel = headersList.get("x-pp5-access") as "full" | "trial" | "readonly" | null;
+  const trialDays = headersList.get("x-pp5-trial-days");
+  const trialDaysRemaining = trialDays ? parseInt(trialDays, 10) : undefined;
 
   // School logo for the sidebar brand. Single-tenant table, so one row.
   // Fetched alongside auth so it's available on every admin page load.
@@ -82,6 +88,12 @@ export default async function AppLayout({
               <Suspense fallback={null}>
                 <UpdateBanner />
               </Suspense>
+            )}
+            {(accessLevel === "trial" || accessLevel === "readonly") && (
+              <LicenseBanner
+                level={accessLevel}
+                daysRemaining={trialDaysRemaining}
+              />
             )}
             {/* Phase 2.6 — top context strip on every page (breadcrumb + term) */}
             <PageContextBar term={term} />

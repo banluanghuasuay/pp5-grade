@@ -3,6 +3,7 @@
 import { createAdminClient } from "@pp5/database/admin";
 import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
+import { requireWriteAccess } from "@/lib/access";
 
 // ============================================================
 // Homeroom teacher assignments — 1 primary + 1 secondary per ห้อง.
@@ -44,6 +45,7 @@ function parseRole(raw: string): HomeroomRole {
  * error to the client.
  */
 export async function assignHomeroomTeacher(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   await ensureAdmin();
 
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
@@ -91,6 +93,7 @@ export async function assignHomeroomTeacher(formData: FormData): Promise<void> {
  * nothing to remove.
  */
 export async function clearHomeroomTeacher(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   await ensureAdmin();
 
   const classroomId = String(formData.get("classroom_id") ?? "").trim();

@@ -4,6 +4,7 @@ import { createAdminClient } from "@pp5/database/admin";
 import { getCurrentUser } from "@pp5/database/queries";
 import ExcelJS from "exceljs";
 import { revalidatePath } from "next/cache";
+import { requireWriteAccess } from "@/lib/access";
 
 const STUDENT_DOMAIN = "student.pp5.local";
 
@@ -198,6 +199,7 @@ async function ensureAdmin(): Promise<string | null> {
 export async function parseStudentImport(
   formData: FormData,
 ): Promise<PreviewResult> {
+  await requireWriteAccess();
   const authErr = await ensureAdmin();
   if (authErr) return { ok: false, error: authErr };
 
@@ -553,6 +555,7 @@ export async function parseStudentImport(
 export async function commitStudentImportBatch(
   rows: ImportRow[],
 ): Promise<BatchResult> {
+  await requireWriteAccess();
   const authErr = await ensureAdmin();
   if (authErr) {
     return {
@@ -754,6 +757,7 @@ export async function commitStudentImportBatch(
 export async function finalizeStudentImport(
   scopes: AffectedScope[],
 ): Promise<{ ok: boolean }> {
+  await requireWriteAccess();
   const authErr = await ensureAdmin();
   if (authErr) return { ok: false };
 

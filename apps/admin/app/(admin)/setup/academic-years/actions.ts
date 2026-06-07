@@ -4,6 +4,7 @@ import { createClient } from "@pp5/database/server";
 import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireWriteAccess } from "@/lib/access";
 
 export type AcademicYearFormState = {
   error: string | null;
@@ -95,6 +96,7 @@ export async function createAcademicYear(
   _prev: AcademicYearFormState,
   formData: FormData,
 ): Promise<AcademicYearFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return guard;
 
@@ -140,6 +142,7 @@ export async function updateAcademicYear(
   _prev: AcademicYearFormState,
   formData: FormData,
 ): Promise<AcademicYearFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return guard;
 
@@ -194,6 +197,7 @@ export async function updateAcademicYear(
  * On other errors, throws.
  */
 export async function deleteAcademicYear(formData: FormData) {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) throw new Error(guard.error ?? "ไม่มีสิทธิ์");
 
@@ -266,6 +270,7 @@ export async function deleteAcademicYear(formData: FormData) {
  * the current-year badge.
  */
 export async function setCurrentSemester(formData: FormData) {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) throw new Error(guard.error ?? "ไม่มีสิทธิ์");
 
@@ -290,6 +295,7 @@ export async function setCurrentSemester(formData: FormData) {
 }
 
 export async function setCurrentAcademicYear(formData: FormData) {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) throw new Error(guard.error ?? "ไม่มีสิทธิ์");
 

@@ -4,6 +4,7 @@ import { createAdminClient } from "@pp5/database/admin";
 import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
 import { ensureSemesterEditable } from "@/lib/current-term";
+import { requireWriteAccess } from "@/lib/access";
 
 // Layout: 10 "ระหว่างภาค" slots + 1 "ปลายภาค" slot = 11 categories per offering
 const COLLECT_SLOTS = 10;
@@ -127,8 +128,10 @@ export async function ensureCategorySlots(offeringId: string): Promise<
     is_final: boolean;
   }>
 > {
+  await requireWriteAccess();
   const admin = createAdminClient();
   const finalSort = COLLECT_SLOTS + 1;
+
 
   // Read ALL existing (incl. duplicates + stray sort_orders)
   const { data: existing } = await admin
@@ -243,6 +246,7 @@ export async function ensureSecondaryCategorySlots(
     is_final: boolean;
   }>
 > {
+  await requireWriteAccess();
   const admin = createAdminClient();
   const TOTAL_SLOTS = 12;
   const MIDTERM_SORT = 6;
@@ -395,6 +399,7 @@ export async function ensureSecondaryCategorySlots(
 export async function copyMaxScoresFromOffering(
   formData: FormData,
 ): Promise<void> {
+  await requireWriteAccess();
   const targetOfferingId = String(
     formData.get("target_offering_id") ?? "",
   ).trim();
@@ -463,6 +468,7 @@ export async function copyMaxScoresFromOffering(
  * persists and may revalidate.
  */
 export async function saveCategoryMaxScore(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   const id = String(formData.get("category_id") ?? "").trim();
   const maxStr = String(formData.get("max_score") ?? "").trim();
   if (!id) throw new Error("missing category_id");
@@ -490,6 +496,7 @@ export async function saveCategoryMaxScore(formData: FormData): Promise<void> {
  * Non-empty → UPSERT capped at the category's max_score.
  */
 export async function saveScore(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   const studentId = String(formData.get("student_id") ?? "").trim();
   const categoryId = String(formData.get("category_id") ?? "").trim();
   const valueStr = String(formData.get("score") ?? "").trim();
@@ -555,6 +562,7 @@ export async function saveScore(formData: FormData): Promise<void> {
  * Empty value → DELETE the row (semantically: "not assessed yet").
  */
 export async function saveSemesterPassFail(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   const studentId = String(formData.get("student_id") ?? "").trim();
   const offeringId = String(formData.get("offering_id") ?? "").trim();
   const value = String(formData.get("value") ?? "").trim();
@@ -618,6 +626,7 @@ export async function saveSemesterPassFail(formData: FormData): Promise<void> {
  * the row that the summary section reads against the anchor offering).
  */
 export async function setGradeSpecialStatus(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   const studentId = String(formData.get("student_id") ?? "").trim();
   const offeringId = String(formData.get("offering_id") ?? "").trim();
   const gradingPeriod = String(formData.get("grading_period") ?? "").trim();
@@ -685,6 +694,7 @@ export async function setGradeSpecialStatus(formData: FormData): Promise<void> {
  * Mirrors the attendance `setAllForDay` pattern (same shape, different table).
  */
 export async function setAllPassFail(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
   const offeringId = String(formData.get("offering_id") ?? "").trim();
   const setPass = formData.get("set_pass") === "true";

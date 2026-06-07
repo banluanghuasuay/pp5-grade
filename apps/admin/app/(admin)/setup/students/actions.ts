@@ -4,6 +4,7 @@ import { createAdminClient } from "@pp5/database/admin";
 import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireWriteAccess } from "@/lib/access";
 
 const STUDENT_DOMAIN = "student.pp5.local";
 
@@ -109,6 +110,7 @@ export async function renumberClassroomById(
   classroomId: string,
   semester: 0 | 1 | 2 = 0,
 ): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+  await requireWriteAccess();
   const auth = await getCurrentUser();
   if (!auth || auth.profile.role !== "admin") {
     return { ok: false, error: "ไม่มีสิทธิ์ในการดำเนินการ" };
@@ -197,6 +199,7 @@ export async function createStudent(
   _prev: StudentFormState,
   formData: FormData,
 ): Promise<StudentFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return guard;
 
@@ -329,6 +332,7 @@ export async function updateStudent(
   _prev: StudentFormState,
   formData: FormData,
 ): Promise<StudentFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return guard;
 
@@ -459,6 +463,7 @@ export async function resetStudentPassword(
   _prev: ResetPasswordState,
   formData: FormData,
 ): Promise<ResetPasswordState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return { ...guard, success: false };
 

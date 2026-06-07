@@ -79,3 +79,45 @@ export async function verifyLicense(): Promise<LicenseResult> {
   if (!token) return { valid: false, reason: "missing" };
   return verifyToken(token);
 }
+
+// ─── Trial / Access Level ────────────────────────────────────────────────────
+
+export const TRIAL_DAYS = 90;
+
+export type AccessLevel = "full" | "trial" | "readonly";
+
+export type AccessInfo =
+  | { level: "full"; plan: "paid" | "trial-license" }
+  | { level: "trial"; daysRemaining: number }
+  | { level: "readonly"; expiredDaysAgo: number };
+
+export async function getAccessLevel(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any>
+): Promise<AccessInfo> {
+  const { data: school } = await supabase
+    .from("schools")
+    .select("license_key, name_th, created_at")
+    .maybeSingle();
+
+  // 1. ตรวจ license key ก่อน
+  if (school?.license_key) {
+    const result = await verifyToken(school.license_key);
+    if (result.valid) {
+      const plan = result.payload.plan === "paid" ? "paid" : "trial-license";
+      return { level: "full", plan };
+    }
+  }
+
+  // 2. ไม่มี license — ตรวจ trial period จาก created_at
+  const installedAt = school?.created_at ? new Date(school.created_at) : new Date();
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const daysSince = Math.floor((Date.now() - installedAt.getTime()) / msPerDay);
+  const daysRemaining = TRIAL_DAYS - daysSince;
+
+  if (daysRemaining > 0) {
+    return { level: "trial", daysRemaining };
+  }
+
+  return { level: "readonly", expiredDaysAgo: Math.abs(daysRemaining) };
+}

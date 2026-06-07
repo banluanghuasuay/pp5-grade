@@ -8,6 +8,7 @@ import {
   ensureCanEditAsHomeroom,
   ensureCanEvaluateStudent,
 } from "@/lib/teacher-scope";
+import { requireWriteAccess } from "@/lib/access";
 
 async function ensureAdmin(): Promise<void> {
   const auth = await getCurrentUser();
@@ -37,6 +38,7 @@ const OBEC_DEFAULTS = [
  * current max + 1 so the new row appears last.
  */
 export async function createCharacteristic(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   await ensureAdmin();
 
   const name = String(formData.get("name") ?? "").trim();
@@ -71,6 +73,7 @@ export async function createCharacteristic(formData: FormData): Promise<void> {
 export async function updateCharacteristicName(
   formData: FormData,
 ): Promise<void> {
+  await requireWriteAccess();
   await ensureAdmin();
 
   const id = String(formData.get("id") ?? "").trim();
@@ -95,6 +98,7 @@ export async function updateCharacteristicName(
 export async function deactivateCharacteristic(
   formData: FormData,
 ): Promise<void> {
+  await requireWriteAccess();
   await ensureAdmin();
 
   const id = String(formData.get("id") ?? "").trim();
@@ -112,6 +116,7 @@ export async function deactivateCharacteristic(
 
 /** Move a row up or down one position by swapping sort_order with its neighbor. */
 export async function moveCharacteristic(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   await ensureAdmin();
 
   const id = String(formData.get("id") ?? "").trim();
@@ -185,6 +190,7 @@ export async function moveCharacteristic(formData: FormData): Promise<void> {
  * doesn't duplicate.
  */
 export async function seedObecCharacteristics(): Promise<void> {
+  await requireWriteAccess();
   await ensureAdmin();
 
   const admin = createAdminClient();
@@ -255,6 +261,7 @@ export async function seedObecCharacteristics(): Promise<void> {
 export async function saveCharacteristicScore(
   formData: FormData,
 ): Promise<void> {
+  await requireWriteAccess();
   const studentId = String(formData.get("student_id") ?? "").trim();
   const characteristicId = String(
     formData.get("characteristic_id") ?? "",
@@ -331,6 +338,7 @@ export async function saveCharacteristicScore(
 export async function setAllCharacteristicForColumn(
   formData: FormData,
 ): Promise<void> {
+  await requireWriteAccess();
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
   const characteristicId = String(
     formData.get("characteristic_id") ?? "",

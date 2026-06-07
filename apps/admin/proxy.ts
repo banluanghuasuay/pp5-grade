@@ -1,61 +1,64 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 import { updateSession } from "@pp5/database/middleware";
-import { verifyToken } from "./lib/license";
+import { getAccessLevel, type AccessInfo } from "./lib/license";
 import { createClient } from "@supabase/supabase-js";
 
-const LICENSE_COOKIE = "pp5-lic";
-const CACHE_TTL_SEC = 300; // 5 นาที
+// Request headers ที่ส่งต่อให้ server components อ่านผ่าน headers()
+export const ACCESS_HEADER = "x-pp5-access";       // "full" | "trial" | "readonly"
+export const TRIAL_DAYS_HEADER = "x-pp5-trial-days"; // จำนวนวันที่เหลือ (trial เท่านั้น)
 
-async function checkLicense(request: NextRequest): Promise<"ok" | "missing" | "invalid" | "expired" | "school_mismatch"> {
-  // 1. ตรวจ cookie ก่อน — ถ้ายังไม่หมดอายุ ผ่านเลย
-  const cached = request.cookies.get(LICENSE_COOKIE)?.value;
-  if (cached) {
-    const result = await verifyToken(cached);
-    if (result.valid) return "ok";
+// Cookie cache — ลด DB query เหลือ query ทุก 5 นาที แทนทุก request
+const ACCESS_COOKIE = "pp5-access";
+const CACHE_TTL_SEC = 300;
+
+function parseAccessCookie(val: string): AccessInfo | null {
+  const [level, extra] = val.split(":");
+  if (level === "full") return { level: "full", plan: "paid" };
+  if (level === "trial" && extra) return { level: "trial", daysRemaining: parseInt(extra, 10) };
+  if (level === "readonly" && extra) return { level: "readonly", expiredDaysAgo: parseInt(extra, 10) };
+  return null;
+}
+
+function serializeAccessCookie(info: AccessInfo): string {
+  if (info.level === "full") return "full";
+  if (info.level === "trial") return `trial:${info.daysRemaining}`;
+  return `readonly:${info.expiredDaysAgo}`;
+}
+
+function applyAccessHeaders(request: NextRequest, info: AccessInfo) {
+  request.headers.set(ACCESS_HEADER, info.level);
+  if (info.level === "trial") {
+    request.headers.set(TRIAL_DAYS_HEADER, String(info.daysRemaining));
   }
-
-  // 2. cookie หมดหรือไม่มี — query DB
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseKey) return "missing";
-
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: { persistSession: false },
-  });
-
-  const { data } = await supabase
-    .from("schools")
-    .select("license_key, name_th")
-    .maybeSingle();
-
-  if (!data?.license_key) return "missing";
-
-  const result = await verifyToken(data.license_key);
-  if (!result.valid) return result.reason;
-
-  if (data.name_th && result.payload.school_name !== data.name_th) {
-    return "school_mismatch";
-  }
-
-  return "ok";
 }
 
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  // ── 1. Access level (cache → DB) ────────────────────────────────────────
+  let accessInfo: AccessInfo | null = null;
+  let needsCache = false;
 
-  // Allow /license page — avoids infinite redirect loop
-  if (!pathname.startsWith("/license")) {
-    const status = await checkLicense(request);
+  const cached = request.cookies.get(ACCESS_COOKIE)?.value;
+  if (cached) {
+    accessInfo = parseAccessCookie(cached);
+  }
 
-    if (status !== "ok") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/license";
-      url.searchParams.set("reason", status);
-      return NextResponse.redirect(url);
+  if (!accessInfo) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && supabaseKey) {
+      const supabase = createClient(supabaseUrl, supabaseKey, {
+        auth: { persistSession: false },
+      });
+      accessInfo = await getAccessLevel(supabase);
+      needsCache = true;
     }
   }
 
-  // Surface `?embed=1` as a request header BEFORE updateSession runs.
+  // ส่ง access level ไปให้ server components ผ่าน request headers
+  // (updateSession forwards request headers downstream via NextResponse.next)
+  if (accessInfo) applyAccessHeaders(request, accessInfo);
+
+  // ── 2. Surface ?embed=1 ─────────────────────────────────────────────────
   // updateSession internally calls `NextResponse.next({ request })`, which
   // forwards request headers downstream — so the (admin) layout will see
   // this header on the server and can skip rendering chrome (sidebar /
@@ -66,6 +69,7 @@ export async function proxy(request: NextRequest) {
     request.headers.set("x-pp5-embed", "1");
   }
 
+  // ── 3. Auth check ────────────────────────────────────────────────────────
   const response = await updateSession(request, {
     // This app is for admin + ครู — session is only valid if:
     //   1. There's a matching row in `users` (= valid for this app)
@@ -81,28 +85,14 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // หลังผ่าน license check แล้ว ต่ออายุ cookie cache
-  const cached = request.cookies.get(LICENSE_COOKIE)?.value;
-  if (!cached) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (supabaseUrl && supabaseKey) {
-      const supabase = createClient(supabaseUrl, supabaseKey, {
-        auth: { persistSession: false },
-      });
-      const { data } = await supabase
-        .from("schools")
-        .select("license_key")
-        .maybeSingle();
-      if (data?.license_key) {
-        response.cookies.set(LICENSE_COOKIE, data.license_key, {
-          httpOnly: true,
-          sameSite: "lax",
-          maxAge: CACHE_TTL_SEC,
-          path: "/",
-        });
-      }
-    }
+  // ── 4. บันทึก cache cookie ──────────────────────────────────────────────
+  if (needsCache && accessInfo) {
+    response.cookies.set(ACCESS_COOKIE, serializeAccessCookie(accessInfo), {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: CACHE_TTL_SEC,
+      path: "/",
+    });
   }
 
   return response;

@@ -3,6 +3,7 @@
 import { createAdminClient } from "@pp5/database/admin";
 import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
+import { requireWriteAccess } from "@/lib/access";
 
 // ============================================================
 // Types
@@ -87,6 +88,7 @@ export async function getPromotePreview(
    *  classroom (faster than scanning the whole source year). */
   sourceClassroomId?: string | null,
 ): Promise<PreviewResult> {
+  await requireWriteAccess();
   const authErr = await ensureAdmin();
   if (authErr) return { ok: false, error: authErr };
   if (!sourceYearId || !targetYearId) {
@@ -291,6 +293,7 @@ export async function getPromotePreview(
 export async function commitPromoteBatch(
   selections: CommitInput[],
 ): Promise<BatchResult> {
+  await requireWriteAccess();
   const authErr = await ensureAdmin();
   if (authErr) {
     return {
@@ -363,6 +366,7 @@ export async function finalizePromote(
    *  wizard run). Defaults to 0 = primary year-wide. */
   semester: 0 | 1 | 2 = 0,
 ): Promise<{ ok: boolean }> {
+  await requireWriteAccess();
   const authErr = await ensureAdmin();
   if (authErr) return { ok: false };
 

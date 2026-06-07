@@ -5,6 +5,7 @@ import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
 import { ensureSemesterEditable } from "@/lib/current-term";
 import { semesterFromIsoDate } from "./calendar";
+import { requireWriteAccess } from "@/lib/access";
 
 export type AttendanceStatus = "present" | "absent" | "leave" | "sick";
 
@@ -80,6 +81,7 @@ async function ensureDateEditableForClassroom(
  *                         shouldn't have attendance records — per user request).
  */
 export async function toggleWorkday(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
   const date = String(formData.get("date") ?? "").trim();
   const isWorkday = formData.get("is_workday") === "true";
@@ -128,6 +130,7 @@ export async function toggleWorkday(formData: FormData): Promise<void> {
  * Click ซ้ำ → clear ทั้งห้อง.
  */
 export async function setAllForDay(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
   const date = String(formData.get("date") ?? "").trim();
   const setPresent = formData.get("set_present") === "true";
@@ -199,6 +202,7 @@ export async function setAllForDay(formData: FormData): Promise<void> {
  * Schema has UNIQUE(student_id, date) so onConflict works cleanly.
  */
 export async function saveAttendance(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   const studentId = String(formData.get("student_id") ?? "").trim();
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
   const date = String(formData.get("date") ?? "").trim();

@@ -3,6 +3,7 @@
 import { createAdminClient } from "@pp5/database/admin";
 import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
+import { requireWriteAccess } from "@/lib/access";
 
 export type SchoolFormState = {
   error: string | null;
@@ -74,6 +75,7 @@ export async function updateSchool(
   _prev: SchoolFormState,
   formData: FormData,
 ): Promise<SchoolFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return guard;
 
@@ -150,6 +152,7 @@ export async function uploadSchoolLogo(
   _prev: SchoolLogoState,
   formData: FormData,
 ): Promise<SchoolLogoState> {
+  await requireWriteAccess();
   const guard = await ensureAdminLogo();
   if (guard) return guard;
 
@@ -247,6 +250,7 @@ export async function removeSchoolLogo(
   _prev: SchoolLogoState,
   formData: FormData,
 ): Promise<SchoolLogoState> {
+  await requireWriteAccess();
   const guard = await ensureAdminLogo();
   if (guard) return guard;
 

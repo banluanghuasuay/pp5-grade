@@ -4,6 +4,7 @@ import { createAdminClient } from "@pp5/database/admin";
 import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireWriteAccess } from "@/lib/access";
 
 // =====================================================================
 // Plan-related helpers
@@ -20,6 +21,7 @@ import { redirect } from "next/navigation";
 export async function ensureDefaultPlan(
   gradeLevelId: string,
 ): Promise<string | null> {
+  await requireWriteAccess();
   const admin = createAdminClient();
 
   // Already has plans? Pick the default one (or first) and bail out.
@@ -60,6 +62,7 @@ export async function ensureRoomsLinked(
   academicYearId: string,
   defaultPlanId: string,
 ): Promise<void> {
+  await requireWriteAccess();
   const admin = createAdminClient();
   await admin
     .from("classrooms")
@@ -125,6 +128,7 @@ export async function createPlan(
   _prev: PlanFormState,
   formData: FormData,
 ): Promise<PlanFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdminPlan();
   if (guard) return guard;
 
@@ -177,6 +181,7 @@ export async function updatePlan(
   _prev: PlanFormState,
   formData: FormData,
 ): Promise<PlanFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdminPlan();
   if (guard) return guard;
 
@@ -237,6 +242,7 @@ export async function updatePlan(
  * appear in EP (subjects are shared records, not duplicated).
  */
 export async function copyPlan(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   const guard = await ensureAdminPlan();
   if (guard) throw new Error(guard.error ?? "ไม่มีสิทธิ์");
 
@@ -310,6 +316,7 @@ export async function copyPlan(formData: FormData): Promise<void> {
  * auto-recreate "ทั่วไป" via ensureDefaultPlan.
  */
 export async function deletePlan(formData: FormData) {
+  await requireWriteAccess();
   const guard = await ensureAdminPlan();
   if (guard) throw new Error(guard.error ?? "ไม่มีสิทธิ์");
 
@@ -456,6 +463,7 @@ export async function createSubject(
   _prev: SubjectFormState,
   formData: FormData,
 ): Promise<SubjectFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return guard;
 
@@ -662,6 +670,7 @@ export async function updateSubject(
   _prev: SubjectFormState,
   formData: FormData,
 ): Promise<SubjectFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return guard;
 
@@ -708,6 +717,7 @@ export async function updateSubject(
  * (legacy callers). Normal UI flow always passes `plan_id`.
  */
 export async function deleteSubject(formData: FormData) {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) throw new Error(guard.error ?? "ไม่มีสิทธิ์");
 
@@ -852,6 +862,7 @@ export async function getCloneSubjectsPreview(
    *  target plans (study_plans is not year-scoped). */
   sourcePlanId: string,
 ): Promise<CloneSubjectsPreview> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return { ok: false, error: guard.error ?? "ไม่มีสิทธิ์" };
   if (!gradeLevelId)
@@ -967,6 +978,7 @@ export async function commitCloneSubjects(
   | { ok: true; inserted: number; relinked: number }
   | { ok: false; error: string }
 > {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return { ok: false, error: guard.error ?? "ไม่มีสิทธิ์" };
   if (!gradeLevelId)
@@ -1077,6 +1089,7 @@ export async function commitCloneSubjects(
  * Kept for legacy compatibility — new UI uses hard delete instead.
  */
 export async function toggleSubjectActive(formData: FormData) {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) throw new Error(guard.error ?? "ไม่มีสิทธิ์");
 

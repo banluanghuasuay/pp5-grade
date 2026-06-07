@@ -8,6 +8,7 @@ import {
   ensureCanEditAsHomeroom,
   ensureCanEvaluateStudent,
 } from "@/lib/teacher-scope";
+import { requireWriteAccess } from "@/lib/access";
 
 async function ensureAdmin(): Promise<void> {
   const auth = await getCurrentUser();
@@ -33,6 +34,7 @@ type Field = (typeof FIELDS)[number];
 export async function saveReadingThinkingScore(
   formData: FormData,
 ): Promise<void> {
+  await requireWriteAccess();
   const studentId = String(formData.get("student_id") ?? "").trim();
   const yearId = String(formData.get("year_id") ?? "").trim();
   const semRaw = String(formData.get("semester") ?? "").trim();
@@ -95,6 +97,7 @@ export async function saveReadingThinkingScore(
 export async function setAllReadingThinkingForColumn(
   formData: FormData,
 ): Promise<void> {
+  await requireWriteAccess();
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
   const yearId = String(formData.get("year_id") ?? "").trim();
   const semRaw = String(formData.get("semester") ?? "").trim();

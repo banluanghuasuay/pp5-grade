@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
+import { useSearchParams } from "next/navigation";
 import { saveLicenseKey } from "./_actions";
 
 const REASON_LABELS: Record<string, string> = {
@@ -10,12 +11,9 @@ const REASON_LABELS: Record<string, string> = {
   school_mismatch: "ใบอนุญาตไม่ตรงกับโรงเรียน",
 };
 
-export default function LicensePage({
-  searchParams,
-}: {
-  searchParams: { reason?: string };
-}) {
-  const reason = searchParams.reason ?? "missing";
+function LicenseForm() {
+  const searchParams = useSearchParams();
+  const reason = searchParams.get("reason") ?? "missing";
   const label = REASON_LABELS[reason] ?? REASON_LABELS.missing;
 
   const [state, action, pending] = useActionState(saveLicenseKey, null);
@@ -117,5 +115,13 @@ export default function LicensePage({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LicensePage() {
+  return (
+    <Suspense>
+      <LicenseForm />
+    </Suspense>
   );
 }

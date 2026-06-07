@@ -3,6 +3,7 @@
 import { createAdminClient } from "@pp5/database/admin";
 import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
+import { requireWriteAccess } from "@/lib/access";
 
 // ============================================================
 // Subject attendance — บันทึกเวลาเรียน "รายวิชา" (per-offering)
@@ -65,6 +66,7 @@ async function ensureCanEditSubjectAttendance(
  * the grid client can follow the same per-cell save pattern.
  */
 export async function saveSubjectAttendance(formData: FormData): Promise<void> {
+  await requireWriteAccess();
   const offeringId = String(formData.get("offering_id") ?? "").trim();
   const studentId = String(formData.get("student_id") ?? "").trim();
   const weekStr = String(formData.get("week") ?? "").trim();
@@ -141,6 +143,7 @@ export async function saveSubjectAttendance(formData: FormData): Promise<void> {
 export async function setSubjectAttendanceForSlot(
   formData: FormData,
 ): Promise<void> {
+  await requireWriteAccess();
   const offeringId = String(formData.get("offering_id") ?? "").trim();
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
   const semesterStr = String(formData.get("semester") ?? "").trim();

@@ -6,6 +6,7 @@ import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { buildStandardHolidaysForYear } from "./holidays-data";
+import { requireWriteAccess } from "@/lib/access";
 
 export type HolidayFormState = {
   error: string | null;
@@ -60,6 +61,7 @@ export async function createHoliday(
   _prev: HolidayFormState,
   formData: FormData,
 ): Promise<HolidayFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return guard;
 
@@ -95,6 +97,7 @@ export async function updateHoliday(
   _prev: HolidayFormState,
   formData: FormData,
 ): Promise<HolidayFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return guard;
 
@@ -125,6 +128,7 @@ export async function updateHoliday(
 }
 
 export async function deleteHoliday(formData: FormData) {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) throw new Error(guard.error ?? "ไม่มีสิทธิ์");
 
@@ -148,6 +152,7 @@ export async function deleteHoliday(formData: FormData) {
  *     "วันเริ่มภาคเรียนที่ 2" now, not "year end", so we can't use it here.
  */
 export async function seedThaiHolidays(): Promise<void> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) throw new Error(guard.error ?? "ไม่มีสิทธิ์");
 

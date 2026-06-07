@@ -4,6 +4,7 @@ import { createAdminClient } from "@pp5/database/admin";
 import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireWriteAccess } from "@/lib/access";
 
 const TEACHER_DOMAIN = "teacher.pp5.local";
 const ADMIN_DOMAIN = "admin.pp5.local";
@@ -115,6 +116,7 @@ export async function createTeacher(
   _prev: TeacherFormState,
   formData: FormData,
 ): Promise<TeacherFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return guard;
 
@@ -215,6 +217,7 @@ export async function resetTeacherPassword(
   _prev: ResetPasswordState,
   formData: FormData,
 ): Promise<ResetPasswordState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return { ...guard, success: false };
 
@@ -283,6 +286,7 @@ export async function resetTeacherPassword(
  * User spec 2026-05-22.
  */
 export async function deleteTeacher(formData: FormData) {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) {
     redirect(
@@ -417,6 +421,7 @@ export async function updateTeacher(
   _prev: TeacherFormState,
   formData: FormData,
 ): Promise<TeacherFormState> {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) return guard;
 

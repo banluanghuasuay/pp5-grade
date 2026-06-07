@@ -4,6 +4,7 @@ import { createAdminClient } from "@pp5/database/admin";
 import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireWriteAccess } from "@/lib/access";
 
 async function ensureAdmin(): Promise<void> {
   const auth = await getCurrentUser();
@@ -21,6 +22,7 @@ async function ensureAdmin(): Promise<void> {
  * back restores visibility — no data loss.
  */
 export async function setClassroomPlan(formData: FormData) {
+  await requireWriteAccess();
   await ensureAdmin();
 
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
@@ -57,6 +59,7 @@ export async function setClassroomPlan(formData: FormData) {
  * with onConflict cleanly handles both insert + update cases.
  */
 export async function saveOfferingAssignments(formData: FormData) {
+  await requireWriteAccess();
   await ensureAdmin();
 
   const classroomId = String(formData.get("classroom_id") ?? "").trim();

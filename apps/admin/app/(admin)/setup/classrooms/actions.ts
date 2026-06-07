@@ -4,6 +4,7 @@ import { createClient } from "@pp5/database/server";
 import { getCurrentUser } from "@pp5/database/queries";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireWriteAccess } from "@/lib/access";
 
 async function ensureAdmin(): Promise<{ error: string } | null> {
   const auth = await getCurrentUser();
@@ -31,6 +32,7 @@ async function getCurrentYear() {
  * under the current academic year.
  */
 export async function addClassroom(formData: FormData) {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) throw new Error(guard.error);
 
@@ -68,6 +70,7 @@ export async function addClassroom(formData: FormData) {
  * under the current academic year. Cascades to enrollments/attendance/etc.
  */
 export async function removeLastClassroom(formData: FormData) {
+  await requireWriteAccess();
   const guard = await ensureAdmin();
   if (guard) throw new Error(guard.error);
 
