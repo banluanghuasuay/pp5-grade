@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifyShortKey } from "../../lib/license";
 
@@ -52,6 +53,10 @@ export async function saveLicenseKey(
   if (error) {
     return { success: false, error: "บันทึกไม่สำเร็จ กรุณาลองใหม่" };
   }
+
+  // ล้าง access cache cookie เพื่อให้ proxy.ts ดึงสถานะใหม่จาก DB ทันที
+  const cookieStore = await cookies();
+  cookieStore.delete("pp5-access");
 
   redirect("/");
 }
