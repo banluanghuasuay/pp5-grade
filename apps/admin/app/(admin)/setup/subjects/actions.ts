@@ -72,6 +72,34 @@ export async function ensureRoomsLinked(
     .is("study_plan_id", null);
 }
 
+/**
+ * Assign a specific classroom to a study plan.
+ *
+ * Used when a grade has multiple classrooms with different plans
+ * (e.g. ป.1/1 → "ทั่วไป", ป.1/2 → "EP"). Admin clicks a room badge
+ * on a plan card to move that room to this plan.
+ */
+export async function assignRoomToPlan(formData: FormData): Promise<void> {
+  await requireWriteAccess();
+  const guard = await ensureAdminPlan();
+  if (guard) throw new Error(guard.error ?? "ไม่มีสิทธิ์");
+
+  const roomId = String(formData.get("room_id") ?? "").trim();
+  const planId = String(formData.get("plan_id") ?? "").trim();
+  const gradeLevelId = String(formData.get("grade_level_id") ?? "").trim();
+  if (!roomId || !planId || !gradeLevelId) throw new Error("missing params");
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("classrooms")
+    .update({ study_plan_id: planId })
+    .eq("id", roomId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/setup/subjects");
+  redirect(`/setup/subjects?grade=${gradeLevelId}&plan=${planId}`);
+}
+
 // =====================================================================
 // Plan CRUD
 // =====================================================================
