@@ -45,9 +45,11 @@ function pack(plan, expiryDay, hmac8) {
   return (planBit << 79n) | (expBits << 64n) | hmacBig;
 }
 
-// ── HMAC ───────────────────────────────────────────────────────────────────
-function computeHmac(secret, schoolName, plan, expiryDay) {
-  const hmac = crypto.createHmac("sha256", secret);
+// ── HMAC (ใช้ built-in secret — ไม่ต้องตั้งค่า) ────────────────────────────
+const BUILT_IN_SECRET = "PP5-Grade-License-2024";
+
+function computeHmac(schoolName, plan, expiryDay) {
+  const hmac = crypto.createHmac("sha256", BUILT_IN_SECRET);
   hmac.update(`${schoolName}|${plan}|${expiryDay}`);
   return hmac.digest(); // Buffer (32 bytes)
 }
@@ -61,7 +63,6 @@ function getArg(name) {
 const schoolName = getArg("name");
 const plan = getArg("plan") ?? "trial";
 const daysArg = getArg("days");
-const secretArg = getArg("secret");
 
 if (!schoolName) {
   console.error('❌ ต้องระบุ --name="ชื่อโรงเรียน"');
@@ -72,25 +73,12 @@ if (!["trial", "paid"].includes(plan)) {
   process.exit(1);
 }
 
-// ── Secret ─────────────────────────────────────────────────────────────────
-let secret = secretArg;
-if (!secret) {
-  const secretFile = path.join(__dirname, "hmac-secret.txt");
-  if (fs.existsSync(secretFile)) {
-    secret = fs.readFileSync(secretFile, "utf8").trim();
-  }
-}
-if (!secret) {
-  console.error("❌ ไม่พบ secret — ส่ง --secret=xxx หรือสร้างไฟล์ hmac-secret.txt");
-  process.exit(1);
-}
-
 // ── Generate ───────────────────────────────────────────────────────────────
 const isLifetime = plan === "paid";
 const days = isLifetime ? 0 : (daysArg ? parseInt(daysArg, 10) : 30);
 const expiryDay = isLifetime ? 0 : todayDays() + days;
 
-const hmacBytes = computeHmac(secret, schoolName, plan, expiryDay);
+const hmacBytes = computeHmac(schoolName, plan, expiryDay);
 const bits = pack(plan, expiryDay, hmacBytes.slice(0, 8));
 const licenseKey = b32Encode(bits);
 

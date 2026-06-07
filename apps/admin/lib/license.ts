@@ -70,15 +70,17 @@ function b32Decode(key: string): bigint | null {
 
 // ─── HMAC-SHA256 ──────────────────────────────────────────────────────────────
 
+// ฝัง secret ในโค้ดตายตัว — ไม่ต้องตั้งค่า env
+const BUILT_IN_SECRET = "PP5-Grade-License-2024";
+
 async function computeHmac(
-  secret: string,
   schoolName: string,
   plan: string,
   expiryDay: number
 ): Promise<Uint8Array> {
   const enc = new TextEncoder();
   const cryptoKey = await crypto.subtle.importKey(
-    "raw", enc.encode(secret),
+    "raw", enc.encode(BUILT_IN_SECRET),
     { name: "HMAC", hash: "SHA-256" },
     false, ["sign"]
   );
@@ -112,15 +114,12 @@ export async function verifyShortKey(
   key: string,
   schoolName: string
 ): Promise<LicenseResult> {
-  const secret = process.env.LICENSE_HMAC_SECRET;
-  if (!secret) return { valid: false, reason: "invalid" };
-
   const bits = b32Decode(key);
   if (bits === null) return { valid: false, reason: "invalid" };
 
   const { plan, expiryDay, hmac8 } = unpack(bits);
 
-  const expected = await computeHmac(secret, schoolName, plan, expiryDay);
+  const expected = await computeHmac(schoolName, plan, expiryDay);
   const match = hmac8.every((b, i) => b === expected[i]);
   if (!match) return { valid: false, reason: "invalid" };
 
