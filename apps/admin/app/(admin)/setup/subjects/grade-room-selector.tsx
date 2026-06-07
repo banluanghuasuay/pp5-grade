@@ -25,6 +25,8 @@ type Props = {
   rooms: RoomOption[];
   /** The plan currently displayed — used to highlight which room matches it. */
   selectedPlanId: string;
+  /** Room explicitly selected via the dropdown (from ?room URL param). */
+  selectedRoomId?: string;
 };
 
 /**
@@ -48,6 +50,7 @@ export function GradeRoomSelector({
   selectedGradeId,
   rooms,
   selectedPlanId,
+  selectedRoomId,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -70,15 +73,18 @@ export function GradeRoomSelector({
     if (!room?.planId) return; // room has no plan yet — nothing to navigate to
     startNav();
     startTransition(() => {
+      // Include &room= so page.tsx knows which room is "active" and
+      // clicking a plan card will assign that room to the plan.
       router.push(
-        `/setup/subjects?grade=${selectedGradeId}&plan=${room.planId}`,
+        `/setup/subjects?grade=${selectedGradeId}&plan=${room.planId}&room=${roomId}`,
       );
     });
   };
 
-  // Which room (if any) is using the currently-displayed plan
+  // Room to highlight: prefer explicit selectedRoomId (from URL ?room param),
+  // fall back to inferring from which room uses the currently-displayed plan.
   const currentRoomId =
-    rooms.find((r) => r.planId === selectedPlanId)?.id ?? "";
+    selectedRoomId || (rooms.find((r) => r.planId === selectedPlanId)?.id ?? "");
   // Optimistic mirror for the (computed) room value so it snaps instantly too.
   const [roomVal, setRoomOpt] = useOptimisticValue(currentRoomId);
 

@@ -71,11 +71,11 @@ function formatHours(
   return subject.credit_hours != null ? `${subject.credit_hours}` : "—";
 }
 
-type Props = { searchParams: Promise<{ grade?: string; plan?: string }> };
+type Props = { searchParams: Promise<{ grade?: string; plan?: string; room?: string }> };
 
 export default async function SubjectsPage({ searchParams }: Props) {
   await requireAdmin();
-  const { grade: gradeParam, plan: planParam } = await searchParams;
+  const { grade: gradeParam, plan: planParam, room: roomParam } = await searchParams;
   const supabase = await createClient();
 
   // 1. Resolve current academic year (+ semester) + check if a previous year
@@ -214,6 +214,7 @@ export default async function SubjectsPage({ searchParams }: Props) {
               selectedGradeId=""
               rooms={[]}
               selectedPlanId=""
+              selectedRoomId=""
             />
           </div>
           <NavigationGate>
@@ -255,6 +256,12 @@ export default async function SubjectsPage({ searchParams }: Props) {
     label: `${selectedGrade.name_short}/${c.room_number}`,
     planId: c.study_plan_id,
   }));
+
+  // selectedRoom = ห้องที่ admin เลือกจาก dropdown (?room param)
+  // ถ้ามี selectedRoom → คลิกการ์ดแผนจะย้ายห้องนั้นมาแผนที่คลิก
+  const selectedRoom = roomParam
+    ? (rooms.find((r) => r.id === roomParam) ?? null)
+    : null;
 
   // 6. Fetch plans + subject counts (for left column).
   //    Counts only include subjects scoped to the current (year, semester).
@@ -333,6 +340,7 @@ export default async function SubjectsPage({ searchParams }: Props) {
           selectedGradeId={selectedGrade.id}
           rooms={rooms}
           selectedPlanId={selectedPlan.id}
+          selectedRoomId={roomParam ?? ""}
         />
       </div>
 
@@ -348,106 +356,89 @@ export default async function SubjectsPage({ searchParams }: Props) {
           </div>
 
           <div className="space-y-2 p-3">
+            {/* Mode indicator: แสดงเมื่อ admin เลือกห้องจาก dropdown
+                คลิกการ์ดแผนจะย้ายห้องนั้นมาแผนที่คลิก */}
+            {selectedRoom && (
+              <div className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                ห้อง{" "}
+                <span className="font-semibold">{selectedRoom.label}</span>{" "}
+                — คลิกที่แผนด้านล่างเพื่อย้ายห้องนี้
+              </div>
+            )}
+
             {sortedPlans.map((p) => {
               const isActive = p.id === selectedPlan.id;
               const subjectCount = subjectCountByPlan.get(p.id) ?? 0;
               const wrapClass = isActive
-                ? "rounded-md border-2 border-amber-400 bg-amber-50 shadow-sm overflow-hidden"
-                : "rounded-md border border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50 overflow-hidden";
+                ? "flex rounded-md border-2 border-amber-400 bg-amber-50 shadow-sm"
+                : "flex rounded-md border border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50";
+
+              // Shared inner content
+              const planCardInner = (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <p
+                      className={
+                        isActive
+                          ? "font-semibold text-amber-900"
+                          : "font-medium text-zinc-900"
+                      }
+                    >
+                      {p.name}
+                    </p>
+                    {p.is_default && (
+                      <Badge variant="info">default</Badge>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    {subjectCount} วิชา
+                  </p>
+                </>
+              );
+
               return (
                 <div key={p.id} className={wrapClass}>
-                  {/* ── Top row: plan name + edit/delete ── */}
-                  <div className="flex">
+                  {/* ── Main area:
+                       มีห้องที่เลือก → form (คลิกเพื่อย้ายห้องนั้นมาแผนนี้)
+                       ไม่มีห้องที่เลือก → Link (navigate ปกติ) ── */}
+                  {selectedRoom ? (
+                    <form action={assignRoomToPlan} className="min-w-0 flex-1">
+                      <input type="hidden" name="room_id" value={selectedRoom.id} />
+                      <input type="hidden" name="plan_id" value={p.id} />
+                      <input type="hidden" name="grade_level_id" value={selectedGrade.id} />
+                      <button
+                        type="submit"
+                        className="w-full cursor-pointer p-3 text-left"
+                        aria-current={isActive ? "page" : undefined}
+                      >
+                        {planCardInner}
+                      </button>
+                    </form>
+                  ) : (
                     <Link
                       href={`/setup/subjects?grade=${selectedGrade.id}&plan=${p.id}`}
                       className="min-w-0 flex-1 p-3"
                       aria-current={isActive ? "page" : undefined}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <p
-                          className={
-                            isActive
-                              ? "font-semibold text-amber-900"
-                              : "font-medium text-zinc-900"
-                          }
-                        >
-                          {p.name}
-                        </p>
-                        {p.is_default && (
-                          <Badge variant="info">default</Badge>
-                        )}
-                      </div>
-                      <p className="mt-0.5 text-xs text-zinc-500">
-                        {subjectCount} วิชา
-                      </p>
+                      {planCardInner}
                     </Link>
-                    <div className="flex shrink-0 items-center gap-0.5 pr-2">
-                      <Link
-                        href={`/setup/subjects/plans/${p.id}`}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-primary-600"
-                        title="แก้ไขแผน"
-                        aria-label={`แก้ไขแผน ${p.name}`}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Link>
-                      <DeletePlanForm
-                        planId={p.id}
-                        gradeLevelId={selectedGrade.id}
-                        planName={p.name}
-                        subjectCount={subjectCount}
-                      />
-                    </div>
-                  </div>
-
-                  {/* ── Room badges (only when grade has 2+ rooms) ──
-                       Amber badge = ห้องนี้ใช้แผนนี้อยู่
-                       Dashed button = คลิกเพื่อย้ายห้องนั้นมาแผนนี้ */}
-                  {rooms.length > 1 && (
-                    <div className="flex flex-wrap items-center gap-1 border-t border-zinc-200/70 px-3 py-1.5">
-                      <span className="mr-0.5 text-[11px] text-zinc-400">
-                        ห้อง:
-                      </span>
-                      {rooms.map((room) => {
-                        const roomNum = room.label.split("/").pop() ?? "";
-                        if (room.planId === p.id) {
-                          return (
-                            <span
-                              key={room.id}
-                              className="rounded-full bg-amber-200 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
-                            >
-                              /{roomNum}
-                            </span>
-                          );
-                        }
-                        return (
-                          <form key={room.id} action={assignRoomToPlan}>
-                            <input
-                              type="hidden"
-                              name="room_id"
-                              value={room.id}
-                            />
-                            <input
-                              type="hidden"
-                              name="plan_id"
-                              value={p.id}
-                            />
-                            <input
-                              type="hidden"
-                              name="grade_level_id"
-                              value={selectedGrade.id}
-                            />
-                            <button
-                              type="submit"
-                              title={`ย้ายห้อง ${room.label} มาใช้แผน${p.name}`}
-                              className="rounded-full border border-dashed border-zinc-300 px-2 py-0.5 text-[11px] text-zinc-400 transition-colors hover:border-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
-                            >
-                              /{roomNum}
-                            </button>
-                          </form>
-                        );
-                      })}
-                    </div>
                   )}
+                  <div className="flex shrink-0 items-center gap-0.5 pr-2">
+                    <Link
+                      href={`/setup/subjects/plans/${p.id}`}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-primary-600"
+                      title="แก้ไขแผน"
+                      aria-label={`แก้ไขแผน ${p.name}`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Link>
+                    <DeletePlanForm
+                      planId={p.id}
+                      gradeLevelId={selectedGrade.id}
+                      planName={p.name}
+                      subjectCount={subjectCount}
+                    />
+                  </div>
                 </div>
               );
             })}
