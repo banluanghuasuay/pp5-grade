@@ -43,5 +43,7 @@ next-env.d.ts
 # Files we don't want in repo
 files.zip
 
-# License tools (private key — never commit)
-license-tools/
+# License tools — ignore secrets only, not the whole directory
+license-tools/private.pem
+license-tools/public.pem
+license-tools/hmac-secret.txt

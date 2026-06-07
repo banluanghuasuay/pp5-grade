@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PP.5 License Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen py-12 px-4 font-sans">
+
+  <div class="max-w-md mx-auto space-y-5">
+
+    <!-- Header -->
+    <div class="text-center pb-2">
+      <div class="text-4xl mb-2">🔐</div>
+      <h1 class="text-2xl font-bold text-slate-800">PP.5 License Generator</h1>
+      <p class="text-sm text-slate-500 mt-1">ใช้เครื่องมือนี้ในเครื่องผู้พัฒนาเท่านั้น</p>
+    </div>
+
+    <!-- Step 1: Secret -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+      <div class="flex items-center gap-2">
+        <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">1</span>
+        <h2 class="font-semibold text-slate-700">HMAC Secret</h2>
+      </div>
+      <div>
+        <label for="secretInput" class="block text-sm text-slate-600 mb-1">
+          ค่าตรงกับ <code class="bg-slate-100 px-1 rounded text-xs">LICENSE_HMAC_SECRET</code> ใน .env.local ของโรงเรียน
+        </label>
+        <div class="flex gap-2">
+          <input id="secretInput" type="password" placeholder="กรอก secret key"
+            class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono" />
+          <button id="toggleSecret" type="button"
+            class="px-3 py-2 text-slate-500 hover:text-slate-700 border border-slate-300 rounded-lg text-sm">
+            👁
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: School Info -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+      <div class="flex items-center gap-2">
+        <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">2</span>
+        <h2 class="font-semibold text-slate-700">ข้อมูลโรงเรียน</h2>
+      </div>
+      <div>
+        <label for="schoolName" class="block text-sm font-medium text-slate-600 mb-1">
+          ชื่อโรงเรียน <span class="text-red-500">*</span>
+        </label>
+        <input id="schoolName" type="text" placeholder="โรงเรียนวัดสมุทร"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        <p class="text-xs text-slate-400 mt-1.5">⚠️ ต้องตรงกับ <code class="bg-slate-100 px-1 rounded">name_th</code> ในฐานข้อมูลทุกตัวอักษร</p>
+      </div>
+    </div>
+
+    <!-- Step 3: Plan -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+      <div class="flex items-center gap-2">
+        <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">3</span>
+        <h2 class="font-semibold text-slate-700">แผน License</h2>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label id="labelPaid" class="flex items-start gap-3 border-2 border-blue-500 bg-blue-50 rounded-xl px-4 py-3 cursor-pointer transition-all">
+          <input type="radio" name="plan" value="paid" checked class="mt-0.5 accent-blue-600" />
+          <div>
+            <div class="text-sm font-semibold text-blue-800">Paid</div>
+            <div class="text-xs text-blue-600 mt-0.5">ตลอดชีพ<br/>ไม่มีวันหมดอายุ</div>
+          </div>
+        </label>
+        <label id="labelTrial" class="flex items-start gap-3 border-2 border-slate-200 bg-white rounded-xl px-4 py-3 cursor-pointer transition-all">
+          <input type="radio" name="plan" value="trial" class="mt-0.5 accent-amber-600" />
+          <div>
+            <div class="text-sm font-semibold text-slate-700">Trial</div>
+            <div class="text-xs text-slate-500 mt-0.5">กำหนด<br/>จำนวนวัน</div>
+          </div>
+        </label>
+      </div>
+
+      <div id="daysRow" class="hidden">
+        <label for="days" class="block text-sm font-medium text-slate-600 mb-1">จำนวนวัน</label>
+        <div class="flex items-center gap-3">
+          <input id="days" type="number" value="30" min="1" max="9999"
+            class="w-28 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <span class="text-sm text-slate-500">วัน</span>
+          <span id="expiryPreview" class="text-xs text-slate-400"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generate Button -->
+    <button id="generateBtn"
+      class="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold py-3.5 rounded-2xl shadow transition-all text-base">
+      🔐 Generate License Key
+    </button>
+
+    <!-- Error -->
+    <div id="errorBox" class="hidden bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700"></div>
+
+    <!-- Output -->
+    <div id="outputCard" class="hidden bg-white rounded-2xl border border-emerald-300 shadow-sm p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold text-emerald-700">✅ License Key</h2>
+        <button id="copyBtn"
+          class="text-sm bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors">
+          📋 คัดลอก
+        </button>
+      </div>
+
+      <div id="outputMeta" class="text-sm text-slate-600 space-y-1 bg-slate-50 rounded-lg p-3"></div>
+
+      <!-- Key display: large, centered, easy to read -->
+      <div class="bg-slate-900 rounded-xl p-5 text-center">
+        <div id="outputKey"
+          class="font-mono text-2xl font-bold tracking-widest text-white select-all cursor-default">
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-400">ส่ง key นี้ให้โรงเรียนกรอกที่หน้า <code class="bg-slate-100 px-1 rounded">/license</code></p>
+    </div>
+
+    <!-- Footer -->
+    <p class="text-center text-xs text-slate-400 pb-4">
+      PP.5 Grade System · topchanon@gmail.com
+    </p>
+
+  </div>
+
+  <script>
+    // ─── Base32 (same alphabet as TypeScript side) ────────────────────────────
+    const B32 = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const KEY_EPOCH_MS = Date.UTC(2024, 0, 1);
+
+    function todayDays() {
+      return Math.floor((Date.now() - KEY_EPOCH_MS) / 86400000);
+    }
+
+    function b32Encode(bits80n) {
+      let n = bits80n;
+      let s = '';
+      for (let i = 0; i < 16; i++) { s = B32[Number(n & 31n)] + s; n >>= 5n; }
+      return `${s.slice(0,4)}-${s.slice(4,8)}-${s.slice(8,12)}-${s.slice(12,16)}`;
+    }
+
+    function pack(plan, expiryDay, hmac8) {
+      const planBit  = BigInt(plan === 'trial' ? 1 : 0);
+      const expBits  = BigInt(expiryDay & 0x7fff);
+      let hmacBig    = 0n;
+      for (const b of hmac8) hmacBig = (hmacBig << 8n) | BigInt(b);
+      return (planBit << 79n) | (expBits << 64n) | hmacBig;
+    }
+
+    // ─── HMAC via Web Crypto ──────────────────────────────────────────────────
+    async function computeHmac(secret, schoolName, plan, expiryDay) {
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        'raw', enc.encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false, ['sign']
+      );
+      const sig = await crypto.subtle.sign(
+        'HMAC', key,
+        enc.encode(`${schoolName}|${plan}|${expiryDay}`)
+      );
+      return new Uint8Array(sig); // 32 bytes, take first 8
+    }
+
+    // ─── UI wiring ────────────────────────────────────────────────────────────
+
+    // Toggle secret visibility
+    document.getElementById('toggleSecret').addEventListener('click', () => {
+      const inp = document.getElementById('secretInput');
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    });
+
+    // Plan radio toggle
+    document.querySelectorAll('input[name="plan"]').forEach(r => {
+      r.addEventListener('change', updatePlanUI);
+    });
+
+    function updatePlanUI() {
+      const isPaid = document.querySelector('input[name="plan"]:checked').value === 'paid';
+      document.getElementById('daysRow').classList.toggle('hidden', isPaid);
+      document.getElementById('labelPaid').className = isPaid
+        ? 'flex items-start gap-3 border-2 border-blue-500 bg-blue-50 rounded-xl px-4 py-3 cursor-pointer transition-all'
+        : 'flex items-start gap-3 border-2 border-slate-200 bg-white rounded-xl px-4 py-3 cursor-pointer transition-all';
+      document.getElementById('labelTrial').className = !isPaid
+        ? 'flex items-start gap-3 border-2 border-amber-400 bg-amber-50 rounded-xl px-4 py-3 cursor-pointer transition-all'
+        : 'flex items-start gap-3 border-2 border-slate-200 bg-white rounded-xl px-4 py-3 cursor-pointer transition-all';
+      updateExpiryPreview();
+    }
+
+    // Expiry preview
+    document.getElementById('days').addEventListener('input', updateExpiryPreview);
+
+    function updateExpiryPreview() {
+      const d = parseInt(document.getElementById('days').value || '0', 10);
+      if (!d || d < 1) { document.getElementById('expiryPreview').textContent = ''; return; }
+      const date = new Date(Date.now() + d * 86400000);
+      document.getElementById('expiryPreview').textContent =
+        '→ หมด ' + date.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    // ─── Generate ─────────────────────────────────────────────────────────────
+    document.getElementById('generateBtn').addEventListener('click', async () => {
+      hideError();
+      document.getElementById('outputCard').classList.add('hidden');
+
+      const secret     = document.getElementById('secretInput').value.trim();
+      const schoolName = document.getElementById('schoolName').value.trim();
+      const plan       = document.querySelector('input[name="plan"]:checked').value;
+      const days       = parseInt(document.getElementById('days').value || '30', 10);
+
+      if (!secret)     { showError('กรุณากรอก HMAC Secret'); return; }
+      if (!schoolName) { showError('กรุณากรอกชื่อโรงเรียน'); return; }
+      if (plan === 'trial' && (!days || days < 1)) { showError('จำนวนวันต้องมากกว่า 0'); return; }
+
+      const btn = document.getElementById('generateBtn');
+      btn.textContent = '⏳ กำลังสร้าง...';
+      btn.disabled = true;
+
+      try {
+        const isLifetime = plan === 'paid';
+        const expiryDay  = isLifetime ? 0 : todayDays() + days;
+
+        const hmacBytes = await computeHmac(secret, schoolName, plan, expiryDay);
+        const bits      = pack(plan, expiryDay, hmacBytes.slice(0, 8));
+        const licenseKey = b32Encode(bits);
+
+        const expiryText = isLifetime
+          ? 'ตลอดชีพ (ไม่มีวันหมดอายุ)'
+          : new Date(KEY_EPOCH_MS + expiryDay * 86400000)
+              .toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+            + ` (${days} วัน)`;
+
+        document.getElementById('outputKey').textContent = licenseKey;
+        document.getElementById('outputMeta').innerHTML = `
+          <div>🏫 โรงเรียน: <strong>${schoolName}</strong></div>
+          <div>📋 แผน: <strong>${isLifetime ? 'Paid (ตลอดชีพ)' : 'Trial'}</strong></div>
+          <div>⏰ หมดอายุ: <strong>${expiryText}</strong></div>
+        `;
+        document.getElementById('outputCard').classList.remove('hidden');
+        document.getElementById('outputCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      } catch (err) {
+        showError('เกิดข้อผิดพลาด: ' + err.message);
+      } finally {
+        btn.textContent = '🔐 Generate License Key';
+        btn.disabled = false;
+      }
+    });
+
+    // ─── Copy ─────────────────────────────────────────────────────────────────
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      const key = document.getElementById('outputKey').textContent;
+      try {
+        await navigator.clipboard.writeText(key);
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = '✅ คัดลอกแล้ว!';
+        setTimeout(() => btn.textContent = '📋 คัดลอก', 2000);
+      } catch {
+        // fallback: select the text
+        const range = document.createRange();
+        range.selectNodeContents(document.getElementById('outputKey'));
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+      }
+    });
+
+    function showError(msg) {
+      const box = document.getElementById('errorBox');
+      box.textContent = '❌ ' + msg;
+      box.classList.remove('hidden');
+    }
+    function hideError() {
+      document.getElementById('errorBox').classList.add('hidden');
+    }
+
+    // Init
+    updateExpiryPreview();
+  </script>
+</body>
+</html>

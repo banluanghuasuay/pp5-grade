@@ -1,20 +1,100 @@
-import { importSPKI, jwtVerify } from "jose";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtCS5BGklxzTPUhuoatCw
-cze5banEd8QJ8YvAxt03gIZP41HoTr92HFnfznRMmrKciFKc+bPN698B3ltPJnyx
-WMeUF7qBdMGxr3NjZrV7sJupwkM+JYFTHfVjoZmqUVuJWbmYyxBFUPLBoK7vuQay
-19Dp+5/Ck4teWA4kB2Tol8f6+rCe3FGt4LdjmFSklUFof6EBS/HHw23Cr7hO6+qw
-4QggzYkMVV9WXzbrEHrfpVNKy6tyYOVHO3r+saeEZoLpvMZspY7FCgDSG5h0j8hQ
-zcVcbH938pbC3eLWKe/aaUNmERaW9MRTSaMD5EIZtOO7yIuxSS81zTJMBHw2wLM6
-DwIDAQAB
------END PUBLIC KEY-----`;
+// ─── Key format: XXXX-XXXX-XXXX-XXXX (16 base32 chars = 80 bits) ─────────────
+//
+//  bit layout:  [plan:1][expiryDay:15][hmac:64]
+//
+//  plan      = 0 → paid (lifetime), 1 → trial
+//  expiryDay = days from 2024-01-01 (UTC) when the trial expires; 0 for paid
+//  hmac      = first 8 bytes of HMAC-SHA256(secret, `${schoolName}|${plan}|${expiryDay}`)
+//
+//  Base32 alphabet: A-H J-N P-Z 2-9  (no I O 0 1 — ambiguous in print)
+
+const B32 = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+// Days from UTC epoch used by the key format
+const KEY_EPOCH_MS = Date.UTC(2024, 0, 1);
+
+function todayDays(): number {
+  return Math.floor((Date.now() - KEY_EPOCH_MS) / 86_400_000);
+}
+
+// ─── Bit packing ──────────────────────────────────────────────────────────────
+
+function pack(
+  plan: "paid" | "trial",
+  expiryDay: number,  // days from KEY_EPOCH_MS; 0 for paid
+  hmac8: Uint8Array   // first 8 bytes of HMAC
+): bigint {
+  const planBit = BigInt(plan === "trial" ? 1 : 0);
+  const expBits = BigInt(expiryDay & 0x7fff); // 15 bits → max ~89 years from 2024
+  let hmacBig = 0n;
+  for (const b of hmac8) hmacBig = (hmacBig << 8n) | BigInt(b);
+  return (planBit << 79n) | (expBits << 64n) | hmacBig;
+}
+
+function unpack(bits: bigint): {
+  plan: "paid" | "trial";
+  expiryDay: number;
+  hmac8: Uint8Array;
+} {
+  const planBit  = Number(bits >> 79n) & 1;
+  const expiryDay = Number((bits >> 64n) & 0x7fffn);
+  const hmacBig  = bits & ((1n << 64n) - 1n);
+  const hmac8 = new Uint8Array(8);
+  let tmp = hmacBig;
+  for (let i = 7; i >= 0; i--) { hmac8[i] = Number(tmp & 0xffn); tmp >>= 8n; }
+  return { plan: planBit === 1 ? "trial" : "paid", expiryDay, hmac8 };
+}
+
+// ─── Base32 encode / decode ───────────────────────────────────────────────────
+
+function b32Encode(bits80: bigint): string {
+  let n = bits80;
+  let s = "";
+  for (let i = 0; i < 16; i++) { s = B32[Number(n & 31n)] + s; n >>= 5n; }
+  return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}`;
+}
+
+function b32Decode(key: string): bigint | null {
+  const s = key.replace(/-/g, "").toUpperCase();
+  if (s.length !== 16) return null;
+  let n = 0n;
+  for (const ch of s) {
+    const idx = B32.indexOf(ch);
+    if (idx < 0) return null;
+    n = (n << 5n) | BigInt(idx);
+  }
+  return n;
+}
+
+// ─── HMAC-SHA256 ──────────────────────────────────────────────────────────────
+
+async function computeHmac(
+  secret: string,
+  schoolName: string,
+  plan: string,
+  expiryDay: number
+): Promise<Uint8Array> {
+  const enc = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw", enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC", cryptoKey,
+    enc.encode(`${schoolName}|${plan}|${expiryDay}`)
+  );
+  return new Uint8Array(sig);
+}
+
+// ─── Public types ─────────────────────────────────────────────────────────────
 
 export type LicensePayload = {
-  school_id: string;
   school_name: string;
   plan: "trial" | "paid";
+  /** Unix seconds of expiry (trial only) */
   exp?: number;
 };
 
@@ -22,65 +102,46 @@ export type LicenseResult =
   | { valid: true; payload: LicensePayload }
   | { valid: false; reason: "missing" | "invalid" | "expired" | "school_mismatch" };
 
-let _publicKey: CryptoKey | null = null;
+// ─── Verify short key ─────────────────────────────────────────────────────────
 
-async function getPublicKey(): Promise<CryptoKey> {
-  if (!_publicKey) {
-    _publicKey = await importSPKI(PUBLIC_KEY_PEM, "RS256");
-  }
-  return _publicKey;
-}
-
-export async function verifyToken(token: string): Promise<LicenseResult> {
-  try {
-    const publicKey = await getPublicKey();
-    const { payload } = await jwtVerify(token, publicKey, { algorithms: ["RS256"] });
-
-    const licensePayload: LicensePayload = {
-      school_id: payload.school_id as string,
-      school_name: payload.school_name as string,
-      plan: payload.plan as "trial" | "paid",
-      exp: payload.exp,
-    };
-
-    return { valid: true, payload: licensePayload };
-  } catch (err: unknown) {
-    if (err instanceof Error && err.message.includes("exp")) {
-      return { valid: false, reason: "expired" };
-    }
-    return { valid: false, reason: "invalid" };
-  }
-}
-
-// อ่าน license key จาก DB แล้ว verify
-export async function verifyLicenseFromDb(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: SupabaseClient<any>
+/**
+ * ตรวจสอบ license key รูปแบบ XXXX-XXXX-XXXX-XXXX
+ * ต้องการ env var: LICENSE_HMAC_SECRET
+ */
+export async function verifyShortKey(
+  key: string,
+  schoolName: string
 ): Promise<LicenseResult> {
-  const { data } = await supabase
-    .from("schools")
-    .select("license_key, name_th")
-    .maybeSingle();
+  const secret = process.env.LICENSE_HMAC_SECRET;
+  if (!secret) return { valid: false, reason: "invalid" };
 
-  if (!data?.license_key) return { valid: false, reason: "missing" };
+  const bits = b32Decode(key);
+  if (bits === null) return { valid: false, reason: "invalid" };
 
-  const result = await verifyToken(data.license_key);
+  const { plan, expiryDay, hmac8 } = unpack(bits);
 
-  if (result.valid && data.name_th && result.payload.school_name !== data.name_th) {
-    return { valid: false, reason: "school_mismatch" };
+  const expected = await computeHmac(secret, schoolName, plan, expiryDay);
+  const match = hmac8.every((b, i) => b === expected[i]);
+  if (!match) return { valid: false, reason: "invalid" };
+
+  if (plan === "trial" && todayDays() > expiryDay) {
+    return { valid: false, reason: "expired" };
   }
 
-  return result;
+  return {
+    valid: true,
+    payload: {
+      school_name: schoolName,
+      plan,
+      exp:
+        plan === "trial"
+          ? Math.floor((KEY_EPOCH_MS + expiryDay * 86_400_000) / 1000)
+          : undefined,
+    },
+  };
 }
 
-// ใช้ใน proxy.ts (อ่านจาก cookie cache หรือ env fallback)
-export async function verifyLicense(): Promise<LicenseResult> {
-  const token = process.env.LICENSE_KEY;
-  if (!token) return { valid: false, reason: "missing" };
-  return verifyToken(token);
-}
-
-// ─── Trial / Access Level ────────────────────────────────────────────────────
+// ─── Trial / Access Level ─────────────────────────────────────────────────────
 
 export const TRIAL_DAYS = 90;
 
@@ -101,8 +162,8 @@ export async function getAccessLevel(
     .maybeSingle();
 
   // 1. ตรวจ license key ก่อน
-  if (school?.license_key) {
-    const result = await verifyToken(school.license_key);
+  if (school?.license_key && school?.name_th) {
+    const result = await verifyShortKey(school.license_key, school.name_th);
     if (result.valid) {
       const plan = result.payload.plan === "paid" ? "paid" : "trial-license";
       return { level: "full", plan };
@@ -110,14 +171,14 @@ export async function getAccessLevel(
   }
 
   // 2. ไม่มี license — ตรวจ trial period จาก created_at
-  const installedAt = school?.created_at ? new Date(school.created_at) : new Date();
-  const msPerDay = 1000 * 60 * 60 * 24;
-  const daysSince = Math.floor((Date.now() - installedAt.getTime()) / msPerDay);
+  const installedAt = school?.created_at
+    ? new Date(school.created_at)
+    : new Date();
+  const daysSince = Math.floor(
+    (Date.now() - installedAt.getTime()) / 86_400_000
+  );
   const daysRemaining = TRIAL_DAYS - daysSince;
 
-  if (daysRemaining > 0) {
-    return { level: "trial", daysRemaining };
-  }
-
+  if (daysRemaining > 0) return { level: "trial", daysRemaining };
   return { level: "readonly", expiredDaysAgo: Math.abs(daysRemaining) };
 }
