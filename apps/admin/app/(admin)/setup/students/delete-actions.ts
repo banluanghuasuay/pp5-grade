@@ -248,6 +248,65 @@ export async function deleteSingleEnrollment(
   return { ok: true };
 }
 
+// ============================================================
+// deleteStudentCompletely — hard delete: removes auth.users + students row
+//
+// Use when the admin wants to re-add a student with the same student_code.
+// Deleting from `students` cascades to `enrollments`, scores, attendance, etc.
+// This is irreversible.
+// ============================================================
+
+export async function deleteStudentCompletely(
+  studentId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const auth = await getCurrentUser();
+  if (!auth || auth.profile.role !== "admin") {
+    return { ok: false, error: "ไม่มีสิทธิ์ในการดำเนินการ" };
+  }
+
+  const admin = createAdminClient();
+
+  // 1. Fetch the student's auth_user_id so we can remove the auth.users row
+  const { data: student, error: fetchErr } = await admin
+    .from("students")
+    .select("id, auth_user_id")
+    .eq("id", studentId)
+    .maybeSingle();
+
+  if (fetchErr || !student) {
+    return { ok: false, error: fetchErr?.message ?? "ไม่พบนักเรียน" };
+  }
+
+  // 2. Remove the auth.users row — this frees up the fake-email address
+  //    so the same student_code can be registered again.
+  if (student.auth_user_id) {
+    const { error: authErr } = await admin.auth.admin.deleteUser(
+      student.auth_user_id,
+    );
+    if (authErr) {
+      return {
+        ok: false,
+        error: `ลบบัญชีผู้ใช้ไม่สำเร็จ: ${authErr.message}`,
+      };
+    }
+  }
+
+  // 3. Delete the students row — CASCADE removes enrollments automatically.
+  const { error: delErr } = await admin
+    .from("students")
+    .delete()
+    .eq("id", studentId);
+  if (delErr) {
+    return {
+      ok: false,
+      error: `ลบข้อมูลนักเรียนไม่สำเร็จ: ${delErr.message}`,
+    };
+  }
+
+  revalidatePath("/setup/students");
+  return { ok: true };
+}
+
 /**
  * Re-number student_number sequentially in a classroom, sorted by
  * student_code. Mirror of the helper in `./actions.ts`.

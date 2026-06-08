@@ -500,6 +500,7 @@ export default async function StudentsPage({ searchParams }: Props) {
                           displayName={`${r.title ?? ""}${r.first_name} ${r.last_name}`}
                           classroomLabel={r.enrollment.classroom_display}
                           yearBe={currentYear?.year_be ?? 0}
+                          studentId={r.id}
                         />
                       ) : null}
                     </div>
