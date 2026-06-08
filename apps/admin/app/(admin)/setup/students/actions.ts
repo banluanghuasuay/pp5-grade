@@ -14,6 +14,17 @@ const DEFAULT_STUDENT_PASSWORD = "123456";
 
 export type StudentFormState = {
   error: string | null;
+  /**
+   * Set when the submitted student_code already exists in `students`.
+   * The form switches to a re-enrollment view instead of showing an error.
+   */
+  existingStudent?: {
+    id: string;
+    student_code: string;
+    title: string | null;
+    first_name: string;
+    last_name: string;
+  };
   fieldErrors?: {
     student_code?: string;
     password?: string;
@@ -290,6 +301,26 @@ export async function createStudent(
 
   const admin = createAdminClient();
 
+  // Pre-check: if student_code already exists → return existing student info
+  // so the form can offer re-enrollment instead of a hard error.
+  const { data: existingByCode } = await admin
+    .from("students")
+    .select("id, student_code, title, first_name, last_name")
+    .eq("student_code", v.student_code)
+    .maybeSingle();
+  if (existingByCode) {
+    return {
+      error: null,
+      existingStudent: {
+        id: existingByCode.id,
+        student_code: existingByCode.student_code,
+        title: existingByCode.title,
+        first_name: existingByCode.first_name,
+        last_name: existingByCode.last_name,
+      },
+    };
+  }
+
   // Step 1: auth user
   const email = `${v.student_code}@${STUDENT_DOMAIN}`;
   const { data: authData, error: authError } =
@@ -385,6 +416,80 @@ export async function createStudent(
     // Re-sort by student_code so the new student lands at the right position
     await renumberClassroom(admin, v.classroom_id, effectiveSemester);
   }
+
+  revalidatePath("/setup/students");
+  redirect("/setup/students");
+}
+
+/**
+ * Enroll an EXISTING student (already in `students` table) into a classroom.
+ * Used when the admin tries to create a student whose code already exists —
+ * e.g. after a soft-delete (removed from enrollment, record kept).
+ *
+ * Does NOT create a new auth user or students row.
+ */
+export async function enrollExistingStudent(
+  _prev: StudentFormState,
+  formData: FormData,
+): Promise<StudentFormState> {
+  await requireWriteAccess();
+  const guard = await ensureAdmin();
+  if (guard) return guard;
+
+  const studentId = String(formData.get("student_id") ?? "").trim();
+  const classroomId = String(formData.get("classroom_id") ?? "").trim();
+  const semesterRaw = String(formData.get("semester") ?? "1");
+  const semester: 1 | 2 = semesterRaw === "2" ? 2 : 1;
+
+  if (!studentId) return { error: "ไม่ระบุนักเรียน" };
+  if (!classroomId) return { error: "กรุณาเลือกห้องเรียน" };
+
+  const admin = createAdminClient();
+
+  // Resolve effective semester (primary = 0, secondary = 1|2)
+  const { data: classroomInfo } = await admin
+    .from("classrooms")
+    .select(`grade_level:grade_levels!grade_level_id (system)`)
+    .eq("id", classroomId)
+    .maybeSingle();
+  const effectiveSemester: 0 | 1 | 2 =
+    classroomInfo?.grade_level?.system === "secondary" ? semester : 0;
+
+  // Guard: already enrolled in this classroom × semester?
+  const { data: alreadyEnrolled } = await admin
+    .from("enrollments")
+    .select("id")
+    .eq("student_id", studentId)
+    .eq("classroom_id", classroomId)
+    .eq("semester", effectiveSemester)
+    .maybeSingle();
+  if (alreadyEnrolled) {
+    return { error: "นักเรียนอยู่ในห้องนี้แล้ว" };
+  }
+
+  // Assign next student_number
+  const { data: maxResult } = await admin
+    .from("enrollments")
+    .select("student_number")
+    .eq("classroom_id", classroomId)
+    .eq("semester", effectiveSemester)
+    .order("student_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextNumber = (maxResult?.student_number ?? 0) + 1;
+
+  const { error: enrollError } = await admin.from("enrollments").insert({
+    student_id: studentId,
+    classroom_id: classroomId,
+    student_number: nextNumber,
+    semester: effectiveSemester,
+  });
+  if (enrollError) {
+    return { error: `ไม่สามารถลงทะเบียนเข้าห้อง: ${enrollError.message}` };
+  }
+
+  // Renumber using the classroom's saved number_mode
+  await renumberClassroom(admin, classroomId, effectiveSemester);
 
   revalidatePath("/setup/students");
   redirect("/setup/students");
