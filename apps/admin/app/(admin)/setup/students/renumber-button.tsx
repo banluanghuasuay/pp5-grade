@@ -90,7 +90,7 @@ export function RenumberClassroomButton({
             disabled={pending}
             className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60 ${
               mode === opt.value
-                ? "bg-white text-zinc-900 shadow-sm"
+                ? "bg-primary-600 text-white shadow-sm"
                 : "text-zinc-500 hover:text-zinc-700"
             }`}
           >
