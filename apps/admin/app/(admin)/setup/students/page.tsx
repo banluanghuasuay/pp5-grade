@@ -9,6 +9,7 @@ import { RoomFilter } from "../_components/room-filter";
 import { DeleteStudentsDialog } from "./delete-dialog";
 import { DeleteSingleStudentButton } from "./delete-single-button";
 import { NavigationGate } from "./navigation-gate";
+import { type NumberMode } from "./actions";
 import { RenumberClassroomButton } from "./renumber-button";
 
 export const metadata = {
@@ -49,6 +50,7 @@ export default async function StudentsPage({ searchParams }: Props) {
             id,
             grade_level_id,
             room_number,
+            number_mode,
             grade_level:grade_levels!grade_level_id (
               name_short,
               sort_order,
@@ -239,6 +241,7 @@ export default async function StudentsPage({ searchParams }: Props) {
   // The single classroom currently being displayed (for the renumber button)
   let displayedClassroomId: string | null = null;
   let displayedClassroomLabel = "";
+  let displayedClassroomMode: NumberMode = "code";
   if (shouldShowList && gradeFilter) {
     const gradeShort = gradeOptions.find((g) => g.id === gradeFilter)?.label ?? "";
     if (needsRoomChoice && roomFilter) {
@@ -246,10 +249,15 @@ export default async function StudentsPage({ searchParams }: Props) {
       if (c) {
         displayedClassroomId = c.id;
         displayedClassroomLabel = `${gradeShort}/${c.room_number}`;
+        displayedClassroomMode = (c.number_mode ?? "code") as NumberMode;
       }
     } else if (!needsRoomChoice && roomsInSelectedGrade.length === 1) {
+      const c = (classroomsResult.data ?? []).find(
+        (c) => c.id === roomsInSelectedGrade[0].id,
+      );
       displayedClassroomId = roomsInSelectedGrade[0].id;
       displayedClassroomLabel = gradeShort;
+      displayedClassroomMode = (c?.number_mode ?? "code") as NumberMode;
     }
   }
 
@@ -380,6 +388,7 @@ export default async function StudentsPage({ searchParams }: Props) {
               classroomId={displayedClassroomId}
               classroomLabel={displayedClassroomLabel}
               semester={viewSemester}
+              currentMode={displayedClassroomMode}
             />
           )}
         </div>

@@ -308,24 +308,59 @@ export async function deleteStudentCompletely(
 }
 
 /**
- * Re-number student_number sequentially in a classroom, sorted by
- * student_code. Mirror of the helper in `./actions.ts`.
+ * Re-number student_number sequentially in a classroom.
+ * Reads the classroom's saved `number_mode` so the order after a delete
+ * matches what the admin configured via the "เรียงเลขที่ใหม่" button.
  */
 async function renumberClassroom(
   admin: ReturnType<typeof createAdminClient>,
   classroomId: string,
 ) {
+  // Read the saved ordering mode for this classroom
+  const { data: room } = await admin
+    .from("classrooms")
+    .select("number_mode")
+    .eq("id", classroomId)
+    .maybeSingle();
+  const mode = (room?.number_mode ?? "code") as
+    | "code"
+    | "male_first"
+    | "female_first";
+
+  const MALE_TITLES = ["เด็กชาย", "ด.ช.", "นาย"];
+  const FEMALE_TITLES = ["เด็กหญิง", "ด.ญ.", "นางสาว", "นาง"];
+
   const { data: enrollments } = await admin
     .from("enrollments")
-    .select("id, student:students!student_id (student_code)")
+    .select("id, student:students!student_id (student_code, title)")
     .eq("classroom_id", classroomId);
   if (!enrollments) return;
 
   const sorted = enrollments
     .filter((e) => e.student?.student_code)
-    .sort((a, b) =>
-      a.student!.student_code.localeCompare(b.student!.student_code, "th"),
-    );
+    .sort((a, b) => {
+      if (mode !== "code") {
+        const ta = a.student!.title ?? "";
+        const tb = b.student!.title ?? "";
+        const isMaleA = MALE_TITLES.some((p) => ta.startsWith(p));
+        const isFemaleA = FEMALE_TITLES.some((p) => ta.startsWith(p));
+        const isMaleB = MALE_TITLES.some((p) => tb.startsWith(p));
+        const isFemaleB = FEMALE_TITLES.some((p) => tb.startsWith(p));
+        const ga =
+          mode === "male_first"
+            ? isMaleA ? 0 : isFemaleA ? 1 : 2
+            : isFemaleA ? 0 : isMaleA ? 1 : 2;
+        const gb =
+          mode === "male_first"
+            ? isMaleB ? 0 : isFemaleB ? 1 : 2
+            : isFemaleB ? 0 : isMaleB ? 1 : 2;
+        if (ga !== gb) return ga - gb;
+      }
+      return a.student!.student_code.localeCompare(
+        b.student!.student_code,
+        "th",
+      );
+    });
 
   // Phase 1: negative temps
   for (let i = 0; i < sorted.length; i++) {

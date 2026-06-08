@@ -257,6 +257,7 @@ export type Database = {
           created_at: string | null
           grade_level_id: string
           id: string
+          number_mode: string | null
           room_number: number
           status: Database["public"]["Enums"]["classroom_status"] | null
           study_plan_id: string | null
@@ -267,6 +268,7 @@ export type Database = {
           created_at?: string | null
           grade_level_id: string
           id?: string
+          number_mode?: string | null
           room_number: number
           status?: Database["public"]["Enums"]["classroom_status"] | null
           study_plan_id?: string | null
@@ -277,6 +279,7 @@ export type Database = {
           created_at?: string | null
           grade_level_id?: string
           id?: string
+          number_mode?: string | null
           room_number?: number
           status?: Database["public"]["Enums"]["classroom_status"] | null
           study_plan_id?: string | null
